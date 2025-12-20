@@ -23,14 +23,14 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: super
     ports:
-      - "5435:5433" 
+      - "5435:5432" 
     volumes:
       - postgres-bank-data:/var/lib/postgresql/data
 
   # WebShop API
   webshop-api:
     build:
-      context: .
+      context: ./backend
       dockerfile: WebShop/WebShop.API/Dockerfile
     container_name: webshop-api
     depends_on:
@@ -46,17 +46,50 @@ services:
   # Bank API
   bank-api:
     build:
-      context: .
+      context: ./backend
       dockerfile: Bank/Bank.API/Dockerfile
     container_name: bank-api
     depends_on:
       - postgres-bank
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__BankDb=Host=postgres-bank;Database=bank;Username=postgres;Password=super;Port=5433
+      - ConnectionStrings__BankDb=Host=postgres-bank;Database=bank;Username=postgres;Password=super;Port=5432
       - ASPNETCORE_URLS=http://+:80
     ports:
       - "5001:80"
+    # Vue Frontend za WebShop (Development)
+  frontend-webshop:
+    build:
+      context: ./frontend/webshop
+      dockerfile: Dockerfile
+    container_name: frontend-webshop
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/webshop:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:5000
+    depends_on:
+      - webshop-api
+    command: npm run dev -- --host 0.0.0.0
+
+  # Vue Frontend za Banku
+  frontend-bank:
+    build:
+      context: ./frontend/bank
+      dockerfile: Dockerfile
+    container_name: frontend-bank
+    ports:
+      - "5174:5173"
+    volumes:
+      - ./frontend/bank:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:5001
+    depends_on:
+      - bank-api
+    command: npm run dev -- --host 0.0.0.0
 
 volumes:
   postgres-webshop-data:
