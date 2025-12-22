@@ -1,4 +1,4 @@
-﻿namespace Common.DTO
+﻿namespace WebShop.API.DTOs
 {
     public class UserRegisterDto
     {
