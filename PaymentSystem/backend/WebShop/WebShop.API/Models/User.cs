@@ -3,10 +3,11 @@
     public class User
     {
         public long Id { get; set; }
-        public string Email { get; set; }
-        public string PasswordHash { get; set; }
-        public string Name { get; set; }
-        public string Surname { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string PasswordHash { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Surname { get; set; } = string.Empty;
+        public UserRole Role { get; set; } 
 
         public User() { }   
 
@@ -17,7 +18,15 @@
             PasswordHash = passwordHash;
             Name = name;
             Surname = surname;
+            Role = UserRole.Customer;
 
         }
+    }
+
+    public enum UserRole
+    {
+        Admin = 1,
+        Customer = 2
+        
     }
 }
