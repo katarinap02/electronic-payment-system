@@ -1,6 +1,6 @@
 <template>
   <div class="register">
-    <h2>Registracija</h2>
+    <h2>Register</h2>
     
     <div v-if="error" class="error">
       {{ error }}
@@ -13,34 +13,34 @@
       </div>
       
       <div>
-        <label>Ime:</label>
+        <label>Name:</label>
         <input v-model="form.name" type="text" required />
       </div>
       
       <div>
-        <label>Prezime:</label>
+        <label>Surname:</label>
         <input v-model="form.surname" type="text" required />
       </div>
       
       <div>
-        <label>Lozinka:</label>
+        <label>Password:</label>
         <input v-model="form.password" type="password" required />
       </div>
       
       <div>
-        <label>Potvrdi lozinku:</label>
+        <label>Confirm password:</label>
         <input v-model="form.confirmPassword" type="password" required />
         <div v-if="form.password && form.confirmPassword && !passwordsMatch" class="mismatch">
-          Lozinke se ne podudaraju!
+          Password doesn't match!
         </div>
       </div>
       
       <button type="submit" :disabled="isLoading || !passwordsMatch">
-        {{ isLoading ? 'Registrujem...' : 'Registruj se' }}
+        {{ isLoading ? 'Register...' : 'Register' }}
       </button>
       
       <p>
-        Već imate nalog? <router-link to="/login">Prijavite se</router-link>
+        Already have account? <router-link to="/login">Login</router-link>
       </p>
     </form>
   </div>
@@ -79,21 +79,48 @@ export default {
       this.error = '';
       
       try {
-        const response = await fetch('http://localhost:5000/api/auth/register', {
+        const requestData = {
+          Email: this.form.email,
+          Password: this.form.password,
+          Name: this.form.name,
+          Surname: this.form.surname
+        };
+        
+        console.log('Šaljem:', JSON.stringify(requestData, null, 2));
+        
+        const response = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(this.form)
+          body: JSON.stringify(requestData)
         });
         
-        const data = await response.json();
+        console.log('Status odgovora:', response.status);
         
-        if (data.success) {
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Greška od backend-a:', errorText);
+          console.log(errorText)
+          
+          try {
+            const errorData = JSON.parse(errorText);
+            this.error = errorData.message || `Greška (${response.status}): ${errorText}`;
+          } catch {
+            this.error = `Greška (${response.status}): ${errorText}`;
+          }
+          return;
+        }
+        
+        const data = await response.json();
+        console.log('Uspešan odgovor:', data);
+        
+        if (data.success || response.status === 200) {
           alert('Uspešno ste registrovani! Sada se možete prijaviti.');
           this.$router.push('/login');
         } else {
           this.error = data.message || 'Registracija nije uspela';
         }
       } catch (err) {
+        console.error('Mrežna greška:', err);
         this.error = 'Došlo je do greške. Pokušajte ponovo.';
       } finally {
         this.isLoading = false;
@@ -106,10 +133,15 @@ export default {
 <style scoped>
 .register {
   max-width: 400px;
-  margin: 50px auto;
+  min-width: 400px;
   padding: 20px;
   border: 1px solid #ccc;
   border-radius: 5px;
+
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 h2 {
@@ -153,7 +185,7 @@ input {
 button {
   width: 100%;
   padding: 10px;
-  background-color: #007bff;
+  background-color:  #42b983;;
   color: white;
   border: none;
   border-radius: 4px;

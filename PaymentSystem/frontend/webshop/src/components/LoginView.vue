@@ -1,6 +1,6 @@
 <template>
   <div class="login">
-    <h2>Prijava</h2>
+    <h2>Login</h2>
     
     <div v-if="error" class="error">
       {{ error }}
@@ -13,16 +13,16 @@
       </div>
       
       <div>
-        <label>Lozinka:</label>
+        <label>Password:</label>
         <input v-model="form.password" type="password" required />
       </div>
       
       <button type="submit" :disabled="isLoading">
-        {{ isLoading ? 'Prijavljujem...' : 'Prijavi se' }}
+        {{ isLoading ? 'Login...' : 'Login' }}
       </button>
       
       <p>
-        Nemate nalog? <router-link to="/register">Registrujte se</router-link>
+        Don't have account? <router-link to="/register">Register</router-link>
       </p>
     </form>
   </div>
@@ -33,8 +33,8 @@ export default {
   data() {
     return {
       form: {
-        email: '',
-        password: ''
+        Email: '',
+        Password: ''
       },
       error: '',
       isLoading: false
@@ -47,7 +47,7 @@ export default {
       this.error = '';
       
       try {
-        const response = await fetch('http://localhost:5000/api/auth/login', {
+        const response = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(this.form)
@@ -56,11 +56,9 @@ export default {
         const data = await response.json();
         
         if (data.success) {
-          // Sačuvaj token
           localStorage.setItem('token', data.data.token);
           localStorage.setItem('user', JSON.stringify(data.data.user));
           
-          // Preusmeri na dashboard
           this.$router.push('/dashboard');
         } else {
           this.error = data.message || 'Prijava nije uspela';
@@ -78,10 +76,15 @@ export default {
 <style scoped>
 .login {
   max-width: 400px;
-  margin: 50px auto;
+  min-width: 250px;
   padding: 20px;
   border: 1px solid #ccc;
   border-radius: 5px;
+
+   position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 h2 {
