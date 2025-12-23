@@ -61,10 +61,10 @@ export default {
           
           this.$router.push('/dashboard');
         } else {
-          this.error = data.message || 'Prijava nije uspela';
+          this.error = data.message || 'Login failed';
         }
       } catch (err) {
-        this.error = 'Došlo je do greške. Pokušajte ponovo.';
+        this.error = 'Error, try again.';
       } finally {
         this.isLoading = false;
       }

@@ -25,6 +25,9 @@
       <div>
         <label>Password:</label>
         <input v-model="form.password" type="password" required />
+        <div class="password-hint">
+          Password must contain: at least 8 characters, one uppercase letter, one number, and one special character.
+        </div>
       </div>
       
       <div>
@@ -71,7 +74,7 @@ export default {
   methods: {
     async handleRegister() {
       if (!this.passwordsMatch) {
-        this.error = 'Lozinke se ne podudaraju!';
+        this.error = 'Passwords do not match!';
         return;
       }
       
@@ -86,7 +89,7 @@ export default {
           Surname: this.form.surname
         };
         
-        console.log('Šaljem:', JSON.stringify(requestData, null, 2));
+        console.log('Sending:', JSON.stringify(requestData, null, 2));
         
         const response = await fetch('/api/auth/register', {
           method: 'POST',
@@ -94,34 +97,33 @@ export default {
           body: JSON.stringify(requestData)
         });
         
-        console.log('Status odgovora:', response.status);
+        console.log('Response status:', response.status);
         
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('Greška od backend-a:', errorText);
-          console.log(errorText)
+          console.error('Backend error:', errorText);
           
           try {
             const errorData = JSON.parse(errorText);
-            this.error = errorData.message || `Greška (${response.status}): ${errorText}`;
+            this.error = errorData.message || `Error (${response.status}): ${errorText}`;
           } catch {
-            this.error = `Greška (${response.status}): ${errorText}`;
+            this.error = `Error (${response.status}): ${errorText}`;
           }
           return;
         }
         
         const data = await response.json();
-        console.log('Uspešan odgovor:', data);
+        console.log('Successful response:', data);
         
         if (data.success || response.status === 200) {
-          alert('Uspešno ste registrovani! Sada se možete prijaviti.');
+          alert('Successfully registered! You can now login.');
           this.$router.push('/login');
         } else {
-          this.error = data.message || 'Registracija nije uspela';
+          this.error = data.message || 'Registration failed';
         }
       } catch (err) {
-        console.error('Mrežna greška:', err);
-        this.error = 'Došlo je do greške. Pokušajte ponovo.';
+        console.error('Network error:', err);
+        this.error = 'An error occurred. Please try again.';
       } finally {
         this.isLoading = false;
       }
@@ -134,10 +136,11 @@ export default {
 .register {
   max-width: 400px;
   min-width: 400px;
-  padding: 20px;
+  padding: 25px;
   border: 1px solid #ccc;
-  border-radius: 5px;
-
+  border-radius: 8px;
+  background-color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   position: absolute;
   top: 50%;
   left: 50%;
@@ -147,50 +150,78 @@ export default {
 h2 {
   text-align: center;
   margin-bottom: 20px;
+  color: #2c3e50;
 }
 
 form > div {
-  margin-bottom: 15px;
+  margin-bottom: 18px;
 }
 
 label {
   display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #555;
 }
 
 input {
   width: 100%;
-  padding: 8px;
+  padding: 10px 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
   box-sizing: border-box;
+  font-size: 16px;
+  transition: border-color 0.3s;
+}
+
+input:focus {
+  outline: none;
+  border-color: #42b983;
+  box-shadow: 0 0 0 2px rgba(66, 185, 131, 0.1);
+}
+
+.password-hint {
+  font-size: 12px;
+  color: #666;
+  margin-top: 5px;
+  padding: 6px 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border-left: 3px solid #42b983;
 }
 
 .error {
   background-color: #ffe6e6;
   color: #d00;
-  padding: 10px;
+  padding: 12px;
   border-radius: 4px;
   margin-bottom: 15px;
   border: 1px solid #ff9999;
+  text-align: center;
 }
 
 .mismatch {
   color: #d00;
   font-size: 14px;
   margin-top: 5px;
+  font-weight: 500;
 }
 
 button {
   width: 100%;
-  padding: 10px;
-  background-color:  #42b983;;
+  padding: 12px;
+  background-color: #42b983;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-size: 16px;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+button:hover:not(:disabled) {
+  background-color: #3aa876;
 }
 
 button:disabled {
@@ -198,21 +229,21 @@ button:disabled {
   cursor: not-allowed;
 }
 
-button:hover:not(:disabled) {
-  background-color: #0056b3;
-}
-
 p {
   text-align: center;
-  margin-top: 15px;
+  margin-top: 20px;
+  color: #666;
 }
 
 a {
-  color: #007bff;
+  color: #42b983;
   text-decoration: none;
+  font-weight: 500;
 }
 
 a:hover {
   text-decoration: underline;
+  color: #3aa876;
 }
+
 </style>

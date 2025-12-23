@@ -20,11 +20,10 @@ namespace WebShop.API.Services
 
         public AuthResponseDto Register(UserRegisterDto dto)
         {
-
             ValidateRegistration(dto);
 
             if (_userRepository.EmailExists(dto.Email))
-                throw new Exception("Email već postoji.");
+                throw new Exception("Email already exists.");
 
             var user = new User
             {
@@ -36,7 +35,6 @@ namespace WebShop.API.Services
             };
 
             var createdUser = _userRepository.Create(user);
-
             var token = _jwtService.GenerateToken(createdUser);
 
             return new AuthResponseDto
@@ -46,18 +44,17 @@ namespace WebShop.API.Services
             };
         }
 
-        //lozinke pravim kao Zdravo123!
         public AuthResponseDto Login(UserLoginDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
-                throw new Exception("Email i lozinka su obavezni.");
+                throw new Exception("Email and password are mandatory.");
 
             var user = _userRepository.GetByEmail(dto.Email.ToLower().Trim());
             if (user == null)
-                throw new Exception("Pogrešan email.");
+                throw new Exception("Invalid email or password.");
 
             if (!_passwordService.VerifyPassword(dto.Password, user.PasswordHash))
-                throw new Exception("Pogrešna lozinka.");
+                throw new Exception("Invalid email or password.");
 
             var token = _jwtService.GenerateToken(user);
 
@@ -71,7 +68,9 @@ namespace WebShop.API.Services
         public UserDto GetMyProfile(long userId)
         {
             var user = _userRepository.GetById(userId);
-            if (user == null) throw new Exception("Korisnik nije pronađen.");
+            if (user == null)
+                throw new Exception("User not found.");
+
             return MapToDto(user);
         }
 
@@ -86,41 +85,30 @@ namespace WebShop.API.Services
             var errors = new List<string>();
 
             if (string.IsNullOrWhiteSpace(dto.Email))
-                errors.Add("Email je obavezan.");
-            else
-            {
+                errors.Add("Email is required.");
+            else if (!IsValidEmail(dto.Email))
+                errors.Add("Invalid email format.");
 
-                if (!IsValidEmail(dto.Email))
-                    errors.Add("Nevalidan email format.");
-
-            }
-
-            
             if (string.IsNullOrWhiteSpace(dto.Password))
-                errors.Add("Lozinka je obavezna.");
+                errors.Add("Password is required.");
             else
             {
-                
                 if (dto.Password.Length < 8)
-                    errors.Add("Lozinka mora imati najmanje 8 karaktera.");
+                    errors.Add("Password must be at least 8 characters long.");
 
                 if (dto.Password.Length > 64)
-                    errors.Add("Lozinka ne sme biti duža od 64 karaktera.");
+                    errors.Add("Password cannot be longer than 64 characters.");
 
-                bool passwordErrors = _passwordService.IsPasswordStrong(dto.Password);
-                if(!passwordErrors)
-                { errors.Add("Lozinka nije dovoljno jaka"); }
-                
-
+                if (!_passwordService.IsPasswordStrong(dto.Password))
+                    errors.Add("Password is not strong enough. Use uppercase, lowercase, numbers and special characters.");
             }
 
-            if (string.IsNullOrWhiteSpace(dto.Name)) {
-                errors.Add("Ime je obavezno.");
-            }
-                
+            if (string.IsNullOrWhiteSpace(dto.Name))
+                errors.Add("First name is required.");
+
             if (string.IsNullOrWhiteSpace(dto.Surname))
-                errors.Add("Prezime je obavezno.");
-            
+                errors.Add("Last name is required.");
+
             if (errors.Any())
                 throw new Exception(string.Join(" ", errors));
         }
@@ -132,7 +120,10 @@ namespace WebShop.API.Services
                 var addr = new System.Net.Mail.MailAddress(email);
                 return addr.Address == email;
             }
-            catch { return false; }
+            catch
+            {
+                return false;
+            }
         }
 
         private UserDto MapToDto(User user)
@@ -146,7 +137,5 @@ namespace WebShop.API.Services
                 Role = user.Role.ToString()
             };
         }
-
-
     }
 }
