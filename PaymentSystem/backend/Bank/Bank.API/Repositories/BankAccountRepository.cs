@@ -18,11 +18,6 @@ namespace Bank.API.Repositories
                 .FirstOrDefault(a => a.MerchantId == merchantId);
         }
 
-        public BankAccount GetById(long id)
-        {
-            return _context.BankAccounts.Find(id);
-        }
-
         public BankAccount Create(BankAccount account)
         {
             _context.BankAccounts.Add(account);

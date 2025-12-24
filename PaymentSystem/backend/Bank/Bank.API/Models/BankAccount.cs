@@ -3,7 +3,7 @@
     public class BankAccount
     {
         public long Id { get; set; }
-        public string AccountNumber { get; set; } //dodati da mora da ima 34 karaktera, svi racuni u istoj banci
+        public string AccountNumber { get; set; } //svi racuni u istoj banci
         public string SwiftCode { get; set; } = "BACXRSBG"; //11 karaktera
         public decimal Balance { get; set; } //stanje na racunu
         public string Currency { get; set; } = "EUR";
