@@ -1,8 +1,17 @@
 // Bank/Bank.API/Program.cs
-using Microsoft.EntityFrameworkCore;
 using Bank.API.Data;
+using Bank.API.Repositories;
+using Bank.API.Services;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddScoped<BankAccountRepository>();
+builder.Services.AddScoped<PaymentTransactionRepository>();
+builder.Services.AddScoped<CardTokenRepository>();
+
+builder.Services.AddScoped<PaymentService>();
+builder.Services.AddScoped<CardService>();
 
 // Add services to the container.
 builder.Services.AddControllers();

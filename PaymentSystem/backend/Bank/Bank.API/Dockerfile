@@ -11,7 +11,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /webapp
 COPY --from=build /output .
 
-#COPY --from=build /build/Bank/Bank.API/Migrations ./Migrations/ 2>/dev/null || echo "No migrations found, skipping..."
+COPY --from=build /build/Bank/Bank.API/Migrations ./Migrations/
 
 ENV PATH="$PATH:/root/.dotnet/tools"
 
