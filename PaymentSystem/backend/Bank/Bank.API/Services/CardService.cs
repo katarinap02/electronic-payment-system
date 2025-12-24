@@ -75,5 +75,5 @@
             return $"**** **** **** {cardNumber.Substring(cardNumber.Length - 4)}";
         }
     }
-}
+
 }

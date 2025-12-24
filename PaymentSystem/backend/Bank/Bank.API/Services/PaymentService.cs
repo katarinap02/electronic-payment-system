@@ -10,13 +10,15 @@ namespace Bank.API.Services
         private readonly PaymentTransactionRepository _transactionRepo;
         private readonly CardTokenRepository _cardTokenRepo;
         private readonly ILogger<PaymentService> _logger;
+        private readonly CardService _cardService;
 
-        public PaymentService(BankAccountRepository accountRepo, PaymentTransactionRepository transactionRepo, CardTokenRepository cardTokenRepo, ILogger<PaymentService> logger)
+        public PaymentService(BankAccountRepository accountRepo, PaymentTransactionRepository transactionRepo, CardTokenRepository cardTokenRepo, ILogger<PaymentService> logger, CardService cardService)
         {
             _accountRepo = accountRepo;
             _transactionRepo = transactionRepo;
             _cardTokenRepo = cardTokenRepo;
             _logger = logger;
+            _cardService = cardService;
         }
 
         public PaymentResponse InitiatePayment(PaymentRequest request)
@@ -62,6 +64,75 @@ namespace Bank.API.Services
                 PaymentId = paymentId,
                 ExpiresAt = transaction.ExpiresAt,
                 Message = "Payment URL generated successfully"
+            };
+        }
+
+        public PaymentStatusResponse AuthorizeCardPayment(CardInformation request)
+        {
+            //Pronađe transakciju
+            var transaction = _transactionRepo.GetByPaymentId(request.PaymentId);
+            if (transaction == null)
+                throw new Exception("Transaction not found");
+
+            //Proveri status i expiry
+            if (transaction.Status != PaymentTransaction.TransactionStatus.PENDING)
+                throw new Exception($"Transaction is already {transaction.Status}");
+
+            if (transaction.ExpiresAt < DateTime.UtcNow)
+            {
+                transaction.Status = PaymentTransaction.TransactionStatus.EXPIRED;
+                _transactionRepo.Update(transaction);
+                throw new Exception("Payment expired");
+            }
+
+            // Lunov algoritam
+            if (!_cardService.ValidateByLuhn(request.CardNumber))
+                throw new Exception("Invalid card number");
+
+            if (!_cardService.ValidateExpiryDate(request.ExpiryDate))
+                throw new Exception("Card expired or invalid expiry date");
+
+            // Tokenizacija (PCI DSS)
+            var cardToken = new CardToken
+            {
+                Token = _cardService.TokenizeCard(request.CardNumber),
+                CardHash = BCrypt.Net.BCrypt.HashPassword(request.CardNumber),
+                MaskedPan = "**** **** **** " + request.CardNumber.Substring(request.CardNumber.Length - 4),
+                CardholderName = request.CardholderName,
+                ExpiryMonth = request.ExpiryDate.Split('/')[0],
+                ExpiryYear = request.ExpiryDate.Split('/')[1],
+                CreatedAt = DateTime.UtcNow,
+                TransactionId = transaction.Id
+            };
+
+            _cardTokenRepo.Create(cardToken);
+
+            // Simulacija provere stanja (mock)
+            var merchantAccount = _accountRepo.GetById(transaction.MerchantAccountId);
+            // U stvarnom sistemu ovde bi proverio stanje kupca, ovde simulacija
+
+            //Ažurirati transakciju
+            transaction.Status = PaymentTransaction.TransactionStatus.AUTHORIZED;
+            transaction.AuthorizedAt = DateTime.UtcNow;
+            transaction.GlobalTransactionId = "BANK_" + Guid.NewGuid().ToString("N").Substring(0, 10).ToUpper();
+            transaction.CardTokenId = cardToken.Id;
+            _transactionRepo.Update(transaction);
+
+            //Simulacija rezervacije sredstava
+            //merchantAccount.Balance += transaction.Amount;
+            //customerAccount.Balance -= transaction.Amount;
+
+            _logger.LogInformation($"Payment authorized: {transaction.PaymentId}, {transaction.Amount} {transaction.Currency}");
+
+            return new PaymentStatusResponse
+            {
+                PaymentId = transaction.PaymentId,
+                Status = transaction.Status.ToString(),
+                Amount = transaction.Amount,
+                Currency = transaction.Currency,
+                GlobalTransactionId = transaction.GlobalTransactionId,
+                AuthorizedAt = transaction.AuthorizedAt,
+                Message = "Payment authorized successfully"
             };
         }
 

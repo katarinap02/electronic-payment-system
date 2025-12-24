@@ -33,8 +33,29 @@ namespace Bank.API.Controllers
             }
         }
 
-        // Frontend → Bank (forma za plaćanje)
-        [HttpGet("{paymentId}")]
+        [HttpPost("{paymentId}/authorize")]
+        public IActionResult AuthorizePayment(
+            string paymentId,
+            [FromBody] CardInformation request)
+        {
+            try
+            {
+                // Proveri da se paymentId poklapa
+                if (request.PaymentId != paymentId)
+                    return BadRequest(new { error = "PaymentId mismatch" });
+
+                var response = _paymentService.AuthorizeCardPayment(request);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error authorizing payment {paymentId}");
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+            // Frontend → Bank (forma za plaćanje)
+            [HttpGet("{paymentId}")]
         public IActionResult GetPaymentForm(string paymentId)
         {
             try
@@ -49,3 +70,4 @@ namespace Bank.API.Controllers
             }
         }
     }
+}
