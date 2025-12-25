@@ -145,5 +145,12 @@ namespace Bank.API.Repositories
                 .FirstOrDefault(a => a.MerchantId == merchantId && a.IsMerchantAccount);
         }
 
+        public BankAccount? FindCustomerAccount(string customerId)
+        {
+            return _context.BankAccounts
+                .FirstOrDefault(a => a.CustomerId == customerId &&
+                                   !a.IsMerchantAccount);
+        }
+
     }
 }

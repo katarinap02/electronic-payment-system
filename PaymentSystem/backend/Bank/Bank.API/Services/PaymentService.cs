@@ -11,6 +11,7 @@ namespace Bank.API.Services
         private readonly BankAccountRepository _accountRepo;
         private readonly CardRepository _cardRepo;
         private readonly CardTokenRepository _tokenRepo;
+        private readonly CardService _cardService;
         private readonly IConfiguration _configuration;
         private readonly ILogger<PaymentService> _logger;
 
@@ -20,12 +21,14 @@ namespace Bank.API.Services
             CardRepository cardRepo,
             CardTokenRepository tokenRepo,
             IConfiguration configuration,
-            ILogger<PaymentService> logger)
+            ILogger<PaymentService> logger, 
+            CardService cardService)
         {
             _transactionRepo = transactionRepo;
             _accountRepo = accountRepo;
             _cardRepo = cardRepo;
             _tokenRepo = tokenRepo;
+            _cardService = cardService;
             _configuration = configuration;
             _logger = logger;
         }
@@ -50,11 +53,26 @@ namespace Bank.API.Services
                     throw new ArgumentException("Merchant not found or inactive");
                 }
 
-                // Provera duple transakcije (specifikacija: "dvostruko plaćanje")
-                if (_transactionRepo.HasDuplicateTransaction(request.MerchantId, "", request.Amount))
+                // 2. Provera duple transakcije po STAN-u (jedinstven između PSP-a i banke)
+                if (_transactionRepo.HasDuplicateTransactionByStan(request.Stan))
                 {
-                    _logger.LogWarning($"Duplicate transaction detected for Merchant: {request.MerchantId}");
-                    throw new InvalidOperationException("Duplicate transaction detected");
+                    _logger.LogWarning($"Duplicate STAN detected: {request.Stan}");
+
+                    // Pronađi postojeću transakciju sa ovim STAN-om
+                    var existingTransaction = _transactionRepo.GetByStan(request.Stan);
+                    if (existingTransaction != null && !string.IsNullOrEmpty(existingTransaction.PaymentId))
+                    {
+                        // Vrati postojeću ako je duplikat (idempotentnost)
+                        return new PaymentResponse
+                        {
+                            PaymentUrl = GeneratePaymentUrl(existingTransaction.PaymentId),
+                            PaymentId = existingTransaction.PaymentId,
+                            ExpiresAt = existingTransaction.ExpiresAt,
+                            Message = "Duplicate STAN detected. Returning existing payment URL."
+                        };
+                    }
+
+                    throw new InvalidOperationException($"Duplicate STAN: {request.Stan}");
                 }
 
                 // Kreira transakciju (STAN za praćenje transakcije)
@@ -127,24 +145,22 @@ namespace Bank.API.Services
                 throw;
             }
         }
-        /*
+        
         //Karticno placanje
         public PaymentStatusResponse ProcessCardPayment(CardInformation cardInfo)
         {
             try
             {
-                // 1. Validacija PAYMENT_ID i transakcije
+                // Validacija PAYMENT_ID i transakcije
                 var transaction = _transactionRepo.GetByPaymentId(cardInfo.PaymentId);
                 if (transaction == null)
                     throw new ArgumentException("Invalid payment ID");
 
+                // Proverava da li je expired i da li je status Pending
                 if (!_transactionRepo.IsTransactionValid(transaction.Id))
                     throw new InvalidOperationException("Transaction has expired");
 
-                // Tokenizacija kartice (PCI DSS compliance)
-                var cardToken = _tokenRepo.CreateToken(0, transaction.Id); // CardId će se dodati kasnije
-
-                // Validacija kartice 
+                // Validacija kartice, dodati posle proveru da se iznost nije promenio
                 if (!ValidateCardInformation(cardInfo, transaction))
                     throw new InvalidOperationException("Invalid card information");
 
@@ -158,9 +174,28 @@ namespace Bank.API.Services
                     !_cardRepo.ValidateExpiryDate(expiryParts[0], expiryParts[1]))
                     throw new InvalidOperationException("Card has expired or invalid date format");
 
-                // 6. Pronađi ili kreiraj customer account (pošto je sve u istoj banci)
-                // U realnoj implementaciji, ovde bi bio lookup po PAN-u ili customer ID-u
-                var customerAccount = FindOrCreateCustomerAccount(cardInfo, transaction);
+                var cardHash = _cardService.GenerateCardHash(cardInfo.CardNumber);
+                var card = _cardRepo.FindCardByHash(cardHash); 
+
+                if (card == null)
+                    throw new InvalidOperationException("Card not found");
+
+                cardInfo.Cvv = null;
+
+                //Tokenizacija kartice (PCI DSS compliance)
+                var cardToken = _tokenRepo.CreateToken(card.Id, transaction.Id);
+
+                // 6. Pronađi customer account (pošto je sve u istoj banci)
+                // lookup po PAN-u ili customer ID-u
+                var customerAccount = _accountRepo.FindCustomerAccount(card.CustomerId);
+                if (customerAccount == null)
+                    throw new InvalidOperationException("Account not found");
+
+                _transactionRepo.LinkCardAndAccountToTransaction(
+                    transaction.Id,
+                    card.Id,
+                    customerAccount.Id,
+                    card.CustomerId);
 
                 // Rezervacija sredstava 
                 if (!_accountRepo.ReserveFunds(customerAccount.Id, transaction.Amount))
@@ -173,8 +208,6 @@ namespace Bank.API.Services
                 var globalTransactionId = GenerateGlobalTransactionId();
                 _transactionRepo.SetGlobalTransactionId(transaction.Id, globalTransactionId);
 
-                // 10. Link kartice sa transakcijom
-                 _transactionRepo.LinkCardToTransaction(transaction.Id, cardId);
 
                 _logger.LogInformation($"Card payment authorized: {globalTransactionId} for Amount: {transaction.Amount}");
 
@@ -185,6 +218,7 @@ namespace Bank.API.Services
                     Amount = transaction.Amount,
                     Currency = transaction.Currency,
                     GlobalTransactionId = globalTransactionId,
+                    AcquirerTimestamp = DateTime.UtcNow,
                     AuthorizedAt = DateTime.UtcNow,
                     Message = "Payment authorized successfully"
                 };
@@ -209,7 +243,7 @@ namespace Bank.API.Services
 
                 throw;
             }
-        }*/
+        }
 
         //Ovo ce trebati za PSP i WebShop da moze da vidi status
         public PaymentStatusResponse GetPaymentStatus(string paymentId)
@@ -313,8 +347,6 @@ namespace Bank.API.Services
 
         private bool ValidateCardInformation(CardInformation cardInfo, PaymentTransaction transaction)
         {
-            // Provera da se iznos nije promenio
-            // Ova provera bi trebala da bude i na frontendu
 
             // Provera CVV formata
             if (string.IsNullOrEmpty(cardInfo.Cvv) || cardInfo.Cvv.Length < 3 || cardInfo.Cvv.Length > 4)
@@ -327,148 +359,15 @@ namespace Bank.API.Services
             return true;
         }
 
-        /*
-        public PaymentResponse InitiatePayment(PaymentRequest request)
+        private string GenerateGlobalTransactionId()
         {
-            _logger.LogInformation($"InitiatePayment: {request.MerchantId}, {request.Amount} {request.Currency}");
+            // Format koji koriste mnoge banke: prefiks + timestamp + unique ID
+            var bankPrefix = _configuration["BankSettings:Prefix"] ?? "ACQ";
+            var timestamp = DateTime.UtcNow.ToString("yyyyMMdd");
+            var uniqueId = Guid.NewGuid().ToString("N").Substring(0, 12).ToUpper();
 
-            //Validacija merchant-a
-            var merchantAccount = _accountRepo.GetByMerchantId(request.MerchantId);
-            if (merchantAccount == null)
-                throw new Exception($"Merchant not found: {request.MerchantId}");
-
-            //Proverava duplikat STAN-a
-            if (_transactionRepo.StanExists(request.Stan))
-                throw new Exception($"Duplicate STAN: {request.Stan}");
-
-            //Generiše payment_id
-            var paymentId = Guid.NewGuid().ToString();
-
-            //Kreira transakciju
-            var transaction = new PaymentTransaction
-            {
-                PaymentId = paymentId,
-                MerchantId = request.MerchantId,
-                MerchantTimestamp = DateTime.UtcNow,
-                Stan = request.Stan,
-                Amount = request.Amount,
-                Currency = request.Currency,
-                PspTimestamp = request.PspTimestamp,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(10), //ako korisnik izadje i zaboravi na placanje
-                Status = PaymentTransaction.TransactionStatus.PENDING,
-                AcquirerTimestamp = DateTime.UtcNow,
-                MerchantAccountId = merchantAccount.Id
-            };
-
-            _transactionRepo.Create(transaction);
-
-            //Generiše payment_url
-            var paymentUrl = $"http://localhost:5174/pay/{paymentId}";
-
-            return new PaymentResponse
-            {
-                PaymentUrl = paymentUrl,
-                PaymentId = paymentId,
-                ExpiresAt = transaction.ExpiresAt,
-                Message = "Payment URL generated successfully"
-            };
+            return $"{bankPrefix}{timestamp}{uniqueId}";
         }
 
-        public PaymentStatusResponse AuthorizeCardPayment(CardInformation request)
-        {
-            //Pronađe transakciju
-            var transaction = _transactionRepo.GetByPaymentId(request.PaymentId);
-            if (transaction == null)
-                throw new Exception("Transaction not found");
-
-            //Proveri status i expiry
-            if (transaction.Status != PaymentTransaction.TransactionStatus.PENDING)
-                throw new Exception($"Transaction is already {transaction.Status}");
-
-            if (transaction.ExpiresAt < DateTime.UtcNow)
-            {
-                transaction.Status = PaymentTransaction.TransactionStatus.EXPIRED;
-                _transactionRepo.Update(transaction);
-                throw new Exception("Payment expired");
-            }
-
-            // Lunov algoritam
-            if (!_cardService.ValidateByLuhn(request.CardNumber))
-                throw new Exception("Invalid card number");
-
-            if (!_cardService.ValidateExpiryDate(request.ExpiryDate))
-                throw new Exception("Card expired or invalid expiry date");
-
-            // Tokenizacija (PCI DSS)
-            var cardToken = new CardToken
-            {
-                Token = _cardService.TokenizeCard(request.CardNumber),
-                CardHash = BCrypt.Net.BCrypt.HashPassword(request.CardNumber),
-                MaskedPan = "**** **** **** " + request.CardNumber.Substring(request.CardNumber.Length - 4),
-                CardholderName = request.CardholderName,
-                ExpiryMonth = request.ExpiryDate.Split('/')[0],
-                ExpiryYear = request.ExpiryDate.Split('/')[1],
-                CreatedAt = DateTime.UtcNow,
-                TransactionId = transaction.Id
-            };
-
-            _cardTokenRepo.Create(cardToken);
-
-            // Simulacija provere stanja (mock)
-            var merchantAccount = _accountRepo.GetById(transaction.MerchantAccountId);
-            // U stvarnom sistemu ovde bi proverio stanje kupca, ovde simulacija
-
-            //Ažurirati transakciju
-            transaction.Status = PaymentTransaction.TransactionStatus.AUTHORIZED;
-            transaction.AuthorizedAt = DateTime.UtcNow;
-            transaction.GlobalTransactionId = "BANK_" + Guid.NewGuid().ToString("N").Substring(0, 10).ToUpper();
-            transaction.CardTokenId = cardToken.Id;
-            _transactionRepo.Update(transaction);
-
-            //Simulacija rezervacije sredstava
-            //merchantAccount.Balance += transaction.Amount;
-            //customerAccount.Balance -= transaction.Amount;
-
-            _logger.LogInformation($"Payment authorized: {transaction.PaymentId}, {transaction.Amount} {transaction.Currency}");
-
-            return new PaymentStatusResponse
-            {
-                PaymentId = transaction.PaymentId,
-                Status = transaction.Status.ToString(),
-                Amount = transaction.Amount,
-                Currency = transaction.Currency,
-                GlobalTransactionId = transaction.GlobalTransactionId,
-                AuthorizedAt = transaction.AuthorizedAt,
-                Message = "Payment authorized successfully"
-            };
-        }
-
-        public PaymentFormResponse GetPaymentForm(string paymentId)
-        {
-            var transaction = _transactionRepo.GetByPaymentId(paymentId);
-
-            if (transaction == null)
-                throw new Exception("Payment not found");
-
-            if (transaction.Status != PaymentTransaction.TransactionStatus.PENDING)
-                throw new Exception($"Payment is already {transaction.Status}");
-
-            if (transaction.ExpiresAt < DateTime.UtcNow)
-            {
-                transaction.Status = PaymentTransaction.TransactionStatus.EXPIRED;
-                _transactionRepo.Update(transaction);
-                throw new Exception("Payment expired");
-            }
-
-            return new PaymentFormResponse
-            {
-                PaymentId = transaction.PaymentId,
-                Amount = transaction.Amount,
-                Currency = transaction.Currency,
-                MerchantName = "WebShop Example",
-                ExpiresAt = transaction.ExpiresAt,
-                IsQrPayment = false
-            }; 
-        }*/
     }
-    }
+}

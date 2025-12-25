@@ -117,6 +117,20 @@ namespace Bank.API.Services
             }
         }
 
+        public string GenerateCardHash(string pan)
+        {
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            var panBytes = System.Text.Encoding.UTF8.GetBytes(pan + GetCardHashSalt());
+            var hashBytes = sha256.ComputeHash(panBytes);
+            return Convert.ToBase64String(hashBytes);
+        }
+
+        private string GetCardHashSalt()
+        {
+            return Environment.GetEnvironmentVariable("CARD_HASH_SALT") ??
+                   "default-card-salt-change-in-production";
+        }
+
         // Maskiranje PAN-a za logovanje (PCI DSS)
         private string MaskPan(string pan)
         {

@@ -73,7 +73,6 @@ namespace Bank.API.Repositories
                 return false;
 
             token.IsUsed = true;
-            token.ValidateAndDeleteCvv();
 
             _context.SaveChanges();
             return true;
@@ -86,7 +85,6 @@ namespace Bank.API.Repositories
                 return false;
 
             token.DeletedAt = DateTime.UtcNow;
-            token.ValidateAndDeleteCvv();
 
             _context.SaveChanges();
             return true;
@@ -109,7 +107,6 @@ namespace Bank.API.Repositories
             foreach (var token in expiredTokens)
             {
                 token.DeletedAt = DateTime.UtcNow;
-                token.ValidateAndDeleteCvv();
             }
 
             return _context.SaveChanges();

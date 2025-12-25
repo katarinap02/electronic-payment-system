@@ -154,16 +154,23 @@ namespace Bank.API.Repositories
                    transaction.Status == PaymentTransaction.TransactionStatus.PENDING;
         }
 
-        public bool LinkCardToTransaction(long transactionId, long cardId)
-        {
-            var transaction = _context.PaymentTransactions.Find(transactionId);
-            if (transaction == null)
-                return false;
+        public bool LinkCardAndAccountToTransaction(
+        long transactionId,
+        long cardId,
+        long customerAccountId,
+        string customerId)
+            {
+                var transaction = _context.PaymentTransactions.Find(transactionId);
+                if (transaction == null)
+                    return false;
 
-            transaction.CardId = cardId;
-            _context.SaveChanges();
-            return true;
-        }
+                transaction.CardId = cardId;
+                transaction.CustomerAccountId = customerAccountId;
+                transaction.CustomerId = customerId;
+
+                _context.SaveChanges();
+                return true;
+            }
 
         public int ExpireOldTransactions()
         {
@@ -180,15 +187,13 @@ namespace Bank.API.Repositories
             return _context.SaveChanges();
         }
 
-        public bool HasDuplicateTransaction(string merchantId, string merchantOrderId, decimal amount)
+        public bool HasDuplicateTransactionByStan(string stan)
         {
             return _context.PaymentTransactions
-                .Any(t => t.MerchantId == merchantId &&
-                         t.Amount == amount &&
+                .Any(t => t.Stan == stan &&
                          t.Status != PaymentTransaction.TransactionStatus.FAILED &&
                          t.Status != PaymentTransaction.TransactionStatus.EXPIRED &&
-                         t.Status != PaymentTransaction.TransactionStatus.CANCELLED &&
-                         t.MerchantTimestamp > DateTime.UtcNow.AddMinutes(-5));
+                         t.Status != PaymentTransaction.TransactionStatus.CANCELLED);
         }
 
         public bool UpdatePaymentId(long transactionId, string paymentId)

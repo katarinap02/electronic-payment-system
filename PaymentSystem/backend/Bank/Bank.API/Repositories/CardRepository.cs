@@ -96,5 +96,13 @@ namespace Bank.API.Repositories
 
             return $"**** **** **** {cardNumber.Substring(cardNumber.Length - 4)}";
         }
+
+        public Card? FindCardByHash(string cardHash)
+        {
+            return _context.Cards
+                .Include(c => c.Customer)
+                .FirstOrDefault(c => c.CardHash == cardHash &&
+                                   c.Status == Card.CardStatus.ACTIVE);
+        }
     }
 }

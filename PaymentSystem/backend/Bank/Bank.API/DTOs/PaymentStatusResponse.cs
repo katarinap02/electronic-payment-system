@@ -7,6 +7,7 @@
         public decimal Amount { get; set; }
         public string Currency { get; set; }
         public string GlobalTransactionId { get; set; }
+        public DateTime AcquirerTimestamp { get; set; }
         public DateTime? AuthorizedAt { get; set; }
         public string Message { get; set; }
     }
