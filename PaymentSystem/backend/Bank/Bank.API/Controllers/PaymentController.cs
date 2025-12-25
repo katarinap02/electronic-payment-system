@@ -15,7 +15,7 @@ namespace Bank.API.Controllers
         {
             _paymentService = paymentService;
             _logger = logger;
-        }
+        }/*
 
         // PSP → Bank (Tabela 2)
         [HttpPost("initiate")]
@@ -68,6 +68,6 @@ namespace Bank.API.Controllers
                 _logger.LogError(ex, "Error in GetPaymentForm");
                 return BadRequest(new { error = ex.Message });
             }
-        }
+        }*/
     }
 }

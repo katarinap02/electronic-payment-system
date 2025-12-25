@@ -11,6 +11,11 @@ services:
       - "5434:5432"
     volumes:
       - postgres-webshop-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # PostgreSQL za Banku
   postgres-bank:
@@ -24,6 +29,11 @@ services:
       - "5435:5432"
     volumes:
       - postgres-bank-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # WebShop API 
   webshop-api:
@@ -32,7 +42,8 @@ services:
       dockerfile: WebShop/WebShop.API/Dockerfile
     container_name: webshop-api
     depends_on:
-      - postgres-webshop
+      postgres-webshop:
+        condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__WebShopDb=Host=postgres-webshop;Database=webshop;Username=postgres;Password=super;Port=5432
@@ -47,7 +58,8 @@ services:
       dockerfile: Bank/Bank.API/Dockerfile
     container_name: bank-api
     depends_on:
-      - postgres-bank
+      postgres-bank:
+        condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__BankDb=Host=postgres-bank;Database=bank;Username=postgres;Password=super;Port=5432

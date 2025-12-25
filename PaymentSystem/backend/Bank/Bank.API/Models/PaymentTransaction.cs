@@ -27,6 +27,10 @@ namespace Bank.API.Models
         public BankAccount MerchantAccount { get; set; }
         public BankAccount CustomerAccount { get; set; }
         public CardToken CardToken { get; set; }
+        public string? CustomerId { get; set; }     // Koji CUSTOMER
+        public Customer? Customer { get; set; }
+        public long? CardId { get; set; }           // Koja FIZIČKA kartica
+        public Card? Card { get; set; }
         public enum TransactionStatus
         {
             PENDING,      // Kreirana, čeka unos kartice

@@ -1,4 +1,3 @@
-// Bank/Bank.API/Program.cs
 using Bank.API.Data;
 using Bank.API.Repositories;
 using Bank.API.Services;
@@ -22,11 +21,11 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// AUTO-CREATE DATABASE
+// PRIMENI MIGRACIJE AUTOMATSKI
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    //dbContext.Database.EnsureCreated();
+    dbContext.Database.Migrate();
 }
 
 // Configure the HTTP request pipeline.

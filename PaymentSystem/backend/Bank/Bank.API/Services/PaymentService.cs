@@ -20,7 +20,7 @@ namespace Bank.API.Services
             _logger = logger;
             _cardService = cardService;
         }
-
+        /*
         public PaymentResponse InitiatePayment(PaymentRequest request)
         {
             _logger.LogInformation($"InitiatePayment: {request.MerchantId}, {request.Amount} {request.Currency}");
@@ -162,6 +162,6 @@ namespace Bank.API.Services
                 ExpiresAt = transaction.ExpiresAt,
                 IsQrPayment = false
             }; 
-        }
+        }*/
     }
 }
