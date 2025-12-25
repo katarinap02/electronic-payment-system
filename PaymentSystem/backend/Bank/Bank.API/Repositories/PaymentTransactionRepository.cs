@@ -13,40 +13,197 @@ namespace Bank.API.Repositories
             _context = context;
         }
 
-        public PaymentTransaction GetByPaymentId(string paymentId)
+        public PaymentTransaction CreateTransaction(
+            string merchantId,
+            decimal amount,
+            string currency,
+            string stan,
+            DateTime merchantTimestamp,
+            long merchantAccountId,
+            string? customerId = null)
         {
-            return _context.PaymentTransactions
-                .Include(t => t.MerchantAccount)
-                .FirstOrDefault(t => t.PaymentId == paymentId);
-        }
+            var merchantAccount = _context.BankAccounts
+                .FirstOrDefault(a => a.Id == merchantAccountId && a.IsMerchantAccount);
 
-        public PaymentTransaction GetByStan(string stan)
-        {
-            return _context.PaymentTransactions
-                .FirstOrDefault(t => t.Stan == stan);
-        }
+            if (merchantAccount == null)
+                throw new ArgumentException("Merchant account not found");
 
-        public PaymentTransaction Create(PaymentTransaction transaction)
-        {
+            if (_context.PaymentTransactions.Any(t => t.Stan == stan))
+                throw new ArgumentException("STAN must be unique");
+
+            var transaction = new PaymentTransaction
+            {
+                MerchantId = merchantId,
+                Amount = amount,
+                Currency = currency,
+                Stan = stan,
+                MerchantTimestamp = merchantTimestamp,
+                MerchantAccountId = merchantAccountId,
+                PspTimestamp = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(15),
+                CustomerId = customerId
+            };
+
             _context.PaymentTransactions.Add(transaction);
             _context.SaveChanges();
+
             return transaction;
         }
 
-        public void Update(PaymentTransaction transaction)
+        public PaymentTransaction? GetByStan(string stan)
         {
-            _context.PaymentTransactions.Update(transaction);
+            return _context.PaymentTransactions
+                .Include(t => t.MerchantAccount)
+                .Include(t => t.CustomerAccount)
+                .Include(t => t.CardToken)
+                .ThenInclude(ct => ct.Card)
+                .FirstOrDefault(t => t.Stan == stan);
+        }
+
+        public PaymentTransaction? GetByPaymentId(string paymentId)
+        {
+            return _context.PaymentTransactions
+                .Include(t => t.MerchantAccount)
+                .Include(t => t.CustomerAccount)
+                .FirstOrDefault(t => t.PaymentId == paymentId);
+        }
+
+        public bool UpdateStatus(long transactionId, PaymentTransaction.TransactionStatus status)
+        {
+            using var transaction = _context.Database.BeginTransaction();
+
+            try
+            {
+                var paymentTransaction = _context.PaymentTransactions
+                    .FirstOrDefault(t => t.Id == transactionId);
+
+                if (paymentTransaction == null)
+                    return false;
+
+                var validTransitions = new Dictionary<PaymentTransaction.TransactionStatus, List<PaymentTransaction.TransactionStatus>>
+                {
+                    [PaymentTransaction.TransactionStatus.PENDING] = new() {
+                        PaymentTransaction.TransactionStatus.AUTHORIZED,
+                        PaymentTransaction.TransactionStatus.FAILED,
+                        PaymentTransaction.TransactionStatus.EXPIRED,
+                        PaymentTransaction.TransactionStatus.CANCELLED
+                    },
+                    [PaymentTransaction.TransactionStatus.AUTHORIZED] = new() {
+                        PaymentTransaction.TransactionStatus.CAPTURED,
+                        PaymentTransaction.TransactionStatus.FAILED,
+                        PaymentTransaction.TransactionStatus.CANCELLED
+                    },
+                    [PaymentTransaction.TransactionStatus.CAPTURED] = new() { },
+                    [PaymentTransaction.TransactionStatus.FAILED] = new() { },
+                    [PaymentTransaction.TransactionStatus.EXPIRED] = new() { },
+                    [PaymentTransaction.TransactionStatus.CANCELLED] = new() { }
+                };
+
+                if (!validTransitions.ContainsKey(paymentTransaction.Status) ||
+                    !validTransitions[paymentTransaction.Status].Contains(status))
+                {
+                    return false;
+                }
+
+                paymentTransaction.Status = status;
+
+                switch (status)
+                {
+                    case PaymentTransaction.TransactionStatus.AUTHORIZED:
+                        paymentTransaction.AuthorizedAt = DateTime.UtcNow;
+                        break;
+                    case PaymentTransaction.TransactionStatus.CAPTURED:
+                        paymentTransaction.CapturedAt = DateTime.UtcNow;
+                        break;
+                    case PaymentTransaction.TransactionStatus.FAILED:
+                        paymentTransaction.FailedAt = DateTime.UtcNow;
+                        break;
+                }
+
+                _context.SaveChanges();
+                transaction.Commit();
+                return true;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        public bool SetGlobalTransactionId(long transactionId, string globalTransactionId)
+        {
+            var transaction = _context.PaymentTransactions.Find(transactionId);
+            if (transaction == null)
+                return false;
+
+            transaction.GlobalTransactionId = globalTransactionId;
+            transaction.AcquirerTimestamp = DateTime.UtcNow;
+
             _context.SaveChanges();
+            return true;
+        }
+        public bool IsTransactionValid(long transactionId)
+        {
+            var transaction = _context.PaymentTransactions
+                .AsNoTracking()
+                .FirstOrDefault(t => t.Id == transactionId);
+
+            return transaction != null &&
+                   transaction.ExpiresAt > DateTime.UtcNow &&
+                   transaction.Status == PaymentTransaction.TransactionStatus.PENDING;
         }
 
-        public bool PaymentIdExists(string paymentId)
+        public bool LinkCardToTransaction(long transactionId, long cardId)
         {
-            return _context.PaymentTransactions.Any(t => t.PaymentId == paymentId);
+            var transaction = _context.PaymentTransactions.Find(transactionId);
+            if (transaction == null)
+                return false;
+
+            transaction.CardId = cardId;
+            _context.SaveChanges();
+            return true;
         }
 
-        public bool StanExists(string stan)
+        public int ExpireOldTransactions()
         {
-            return _context.PaymentTransactions.Any(t => t.Stan == stan);
+            var expiredTransactions = _context.PaymentTransactions
+                .Where(t => t.ExpiresAt < DateTime.UtcNow &&
+                           t.Status == PaymentTransaction.TransactionStatus.PENDING)
+                .ToList();
+
+            foreach (var transaction in expiredTransactions)
+            {
+                transaction.Status = PaymentTransaction.TransactionStatus.EXPIRED;
+            }
+
+            return _context.SaveChanges();
+        }
+
+        public bool HasDuplicateTransaction(string merchantId, string merchantOrderId, decimal amount)
+        {
+            return _context.PaymentTransactions
+                .Any(t => t.MerchantId == merchantId &&
+                         t.Amount == amount &&
+                         t.Status != PaymentTransaction.TransactionStatus.FAILED &&
+                         t.Status != PaymentTransaction.TransactionStatus.EXPIRED &&
+                         t.Status != PaymentTransaction.TransactionStatus.CANCELLED &&
+                         t.MerchantTimestamp > DateTime.UtcNow.AddMinutes(-5));
+        }
+
+        public bool UpdatePaymentId(long transactionId, string paymentId)
+        {
+            var transaction = _context.PaymentTransactions.Find(transactionId);
+            if (transaction == null)
+                return false;
+
+            // Proveri da li je paymentId jedinstven
+            if (_context.PaymentTransactions.Any(t => t.PaymentId == paymentId))
+                return false;
+
+            transaction.PaymentId = paymentId;
+            _context.SaveChanges();
+            return true;
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Bank.API.Data;
 using Bank.API.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bank.API.Repositories
 {
@@ -12,38 +13,106 @@ namespace Bank.API.Repositories
             _context = context;
         }
 
-        public CardToken GetByToken(string token)
+        public CardToken CreateToken(long cardId, long transactionId)
         {
-            return _context.CardTokens
-                .FirstOrDefault(t => t.Token == token);
-        }
+            var card = _context.Cards
+                .FirstOrDefault(c => c.Id == cardId && c.Status == Card.CardStatus.ACTIVE);
 
-        public CardToken GetByTransactionId(long transactionId)
-        {
-            return _context.CardTokens
-                .FirstOrDefault(t => t.TransactionId == transactionId);
-        }
+            if (card == null)
+                throw new ArgumentException("Card not found or inactive");
 
-        public CardToken Create(CardToken token)
-        {
+            var existingToken = _context.CardTokens
+                .FirstOrDefault(t => t.TransactionId == transactionId &&
+                                   t.DeletedAt == null &&
+                                   t.ExpiresAt > DateTime.UtcNow);
+
+            if (existingToken != null)
+                return existingToken;
+
+            var token = new CardToken
+            {
+                CardId = cardId,
+                TransactionId = transactionId,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(15)
+            };
+
             _context.CardTokens.Add(token);
             _context.SaveChanges();
+
             return token;
         }
 
-        public void Delete(long id)
+        public CardToken? ValidateToken(string token, long transactionId)
         {
-            var token = _context.CardTokens.Find(id);
-            if (token != null)
+            var cardToken = _context.CardTokens
+                .Include(t => t.Card)
+                .FirstOrDefault(t => t.Token == token &&
+                                   t.TransactionId == transactionId &&
+                                   t.DeletedAt == null);
+
+            if (cardToken == null)
+                return null;
+
+            if (cardToken.ExpiresAt < DateTime.UtcNow)
             {
-                token.DeletedAt = DateTime.UtcNow;
+                cardToken.DeletedAt = DateTime.UtcNow;
                 _context.SaveChanges();
+                return null;
             }
+
+            if (cardToken.IsUsed)
+                return null;
+
+            return cardToken;
         }
 
-        public bool TokenExists(string token)
+        public bool MarkTokenAsUsed(long tokenId)
         {
-            return _context.CardTokens.Any(t => t.Token == token);
+            var token = _context.CardTokens.Find(tokenId);
+            if (token == null || token.IsUsed || token.DeletedAt != null)
+                return false;
+
+            token.IsUsed = true;
+            token.ValidateAndDeleteCvv();
+
+            _context.SaveChanges();
+            return true;
+        }
+
+        public bool DeleteToken(long tokenId)
+        {
+            var token = _context.CardTokens.Find(tokenId);
+            if (token == null)
+                return false;
+
+            token.DeletedAt = DateTime.UtcNow;
+            token.ValidateAndDeleteCvv();
+
+            _context.SaveChanges();
+            return true;
+        }
+
+        public bool HasActiveTokenForTransaction(long transactionId)
+        {
+            return _context.CardTokens
+                .Any(t => t.TransactionId == transactionId &&
+                         t.DeletedAt == null &&
+                         t.ExpiresAt > DateTime.UtcNow);
+        }
+
+        public int CleanupExpiredTokens()
+        {
+            var expiredTokens = _context.CardTokens
+                .Where(t => t.ExpiresAt < DateTime.UtcNow && t.DeletedAt == null)
+                .ToList();
+
+            foreach (var token in expiredTokens)
+            {
+                token.DeletedAt = DateTime.UtcNow;
+                token.ValidateAndDeleteCvv();
+            }
+
+            return _context.SaveChanges();
         }
     }
 }

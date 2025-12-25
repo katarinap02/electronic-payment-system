@@ -1,79 +1,143 @@
-﻿namespace Bank.API.Services
+﻿using Bank.API.DTOs;
+using Bank.API.Models;
+using Bank.API.Repositories;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace Bank.API.Services
 {
     public class CardService
     {
+        private readonly CardRepository _cardRepo;
+        private readonly CardTokenRepository _tokenRepo;
         private readonly ILogger<CardService> _logger;
 
-        public CardService(ILogger<CardService> logger)
+        public CardService(
+            CardRepository cardRepo,
+            CardTokenRepository tokenRepo,
+            ILogger<CardService> logger)
         {
+            _cardRepo = cardRepo;
+            _tokenRepo = tokenRepo;
             _logger = logger;
         }
-        public bool ValidateByLuhn(string cardNumber)
-        {
-            _logger.LogInformation($"Validating card by Luhn: {MaskCardNumber(cardNumber)}");
 
-            cardNumber = cardNumber.Replace(" ", "").Replace("-", "");
-
-            int sum = 0;
-            bool pom = false;
-
-            for (int i = cardNumber.Length - 1; i >= 0; i--)
-            {
-                if (!char.IsDigit(cardNumber[i]))
-                    return false;
-
-                int digit = int.Parse(cardNumber[i].ToString());
-
-                if (pom) //da bi uzeo svaku drugu
-                {
-                    digit *= 2;
-                    if (digit > 9)
-                        digit = (digit % 10) + 1;
-                }
-
-                sum += digit;
-                pom = !pom;
-            }
-
-            return (sum % 10 == 0);
-        }
-
-        public bool ValidateExpiryDate(string expiryDate)
+        //Tokenizacija PAN-a 
+        public string TokenizePan(string pan, string merchantId)
         {
             try
             {
-                var parts = expiryDate.Split('/');
-                if (parts.Length != 2) return false;
+                if (!_cardRepo.ValidateCardNumber(pan))
+                    throw new ArgumentException("Invalid card number");
 
-                int month = int.Parse(parts[0]);
-                int year = int.Parse("20" + parts[1]); // "25" → 2025
+                // Generiše sigurni hash za PAN
+                using var sha256 = SHA256.Create();
+                var panBytes = Encoding.UTF8.GetBytes(pan + merchantId + GetSalt());
+                var hashBytes = sha256.ComputeHash(panBytes);
 
-                if (month < 1 || month > 12) return false;
+                // Vrati tokenizovanu verziju (prvi i poslednji deo maskirani)
+                var maskedPan = MaskPan(pan);
+                var token = "tok_" + Convert.ToBase64String(hashBytes)
+                    .Replace("+", "")
+                    .Replace("/", "")
+                    .Replace("=", "")
+                    .Substring(0, 16);
 
-                var expiry = new DateTime(year, month, 1).AddMonths(1).AddDays(-1);
-                return expiry >= DateTime.Now;
+                _logger.LogInformation($"PAN tokenized for merchant: {merchantId}, Masked: {maskedPan}");
+
+                return token;
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                _logger.LogError(ex, $"Error tokenizing PAN for merchant: {merchantId}");
+                throw;
             }
         }
 
-        public string TokenizeCard(string cardNumber)
+        // Validacija kartice za plaćanje
+        public CardValidationResult ValidateCardForPayment(CardInformation cardInfo, decimal amount)
         {
-            var token = "tok_" + Guid.NewGuid().ToString("N").Substring(0, 16);
-            _logger.LogInformation($"Tokenized card: {MaskCardNumber(cardNumber)} → {token}");
-            return token;
+            try
+            {
+                var result = new CardValidationResult();
+
+                // Luhn validacija
+                if (!_cardRepo.ValidateCardNumber(cardInfo.CardNumber))
+                {
+                    result.IsValid = false;
+                    result.ErrorMessage = "Invalid card number";
+                    return result;
+                }
+
+                // Validacija datuma
+                var expiryParts = cardInfo.ExpiryDate.Split('/');
+                if (expiryParts.Length != 2)
+                {
+                    result.IsValid = false;
+                    result.ErrorMessage = "Invalid expiry date format";
+                    return result;
+                }
+
+                if (!_cardRepo.ValidateExpiryDate(expiryParts[0], expiryParts[1]))
+                {
+                    result.IsValid = false;
+                    result.ErrorMessage = "Card has expired";
+                    return result;
+                }
+
+                // Provera CVV formata
+                if (string.IsNullOrEmpty(cardInfo.Cvv) ||
+                   (cardInfo.Cvv.Length != 3 && cardInfo.Cvv.Length != 4))
+                {
+                    result.IsValid = false;
+                    result.ErrorMessage = "Invalid CVV";
+                    return result;
+                }
+
+                // Provera cardholder name
+                if (string.IsNullOrWhiteSpace(cardInfo.CardholderName))
+                {
+                    result.IsValid = false;
+                    result.ErrorMessage = "Cardholder name is required";
+                    return result;
+                }
+
+                // 5. Maskirani PAN za logovanje
+                result.MaskedPan = MaskPan(cardInfo.CardNumber);
+                result.IsValid = true;
+
+                _logger.LogInformation($"Card validated: {result.MaskedPan}");
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating card");
+                throw;
+            }
         }
 
-        // Maskiranje kartice za logging (PCI DSS)
-        private string MaskCardNumber(string cardNumber)
+        // Maskiranje PAN-a za logovanje (PCI DSS)
+        private string MaskPan(string pan)
         {
-            if (string.IsNullOrEmpty(cardNumber) || cardNumber.Length < 4)
+            if (string.IsNullOrEmpty(pan) || pan.Length < 8)
                 return "****";
 
-            return $"**** **** **** {cardNumber.Substring(cardNumber.Length - 4)}";
+            return pan.Substring(0, 4) + new string('*', pan.Length - 8) + pan.Substring(pan.Length - 4);
+        }
+
+        // Salt za hash
+        private string GetSalt()
+        {
+            return Environment.GetEnvironmentVariable("CARD_HASH_SALT") ??
+                   "default-salt-change-in-production";
+        }
+
+        public class CardValidationResult
+        {
+            public bool IsValid { get; set; }
+            public string MaskedPan { get; set; }
+            public string ErrorMessage { get; set; }
         }
     }
-
 }

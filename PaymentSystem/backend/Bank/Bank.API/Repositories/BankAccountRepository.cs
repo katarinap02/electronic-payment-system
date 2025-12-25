@@ -1,5 +1,7 @@
 ﻿using Bank.API.Data;
 using Bank.API.Models;
+using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace Bank.API.Repositories
 {
@@ -12,29 +14,136 @@ namespace Bank.API.Repositories
             _context = context;
         }
 
-        public BankAccount GetByMerchantId(string merchantId)
+        public BankAccount? GetByAccountNumber(string accountNumber)
         {
             return _context.BankAccounts
-                .FirstOrDefault(a => a.MerchantId == merchantId);
+                .Include(a => a.Customer)
+                .FirstOrDefault(a => a.AccountNumber == accountNumber);
+        }
+        public bool ReserveFunds(long accountId, decimal amount)
+        {
+            using var transaction = _context.Database.BeginTransaction(IsolationLevel.Serializable);
+
+            try
+            {
+                var account = _context.BankAccounts
+                    .FirstOrDefault(a => a.Id == accountId);
+
+                if (account == null || account.AvailableBalance < amount)
+                    return false;
+
+                account.AvailableBalance -= amount;
+                account.ReservedBalance += amount;
+
+                _context.SaveChanges();
+                transaction.Commit();
+                return true;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
 
-        public BankAccount Create(BankAccount account)
+        public bool CanReserveFunds(long accountId, decimal amount)
         {
-            _context.BankAccounts.Add(account);
-            _context.SaveChanges();
-            return account;
+            var account = _context.BankAccounts
+                .AsNoTracking()
+                .FirstOrDefault(a => a.Id == accountId);
+
+            return account != null && account.AvailableBalance >= amount;
         }
 
-        public void Update(BankAccount account)
+        public bool CaptureReservedFunds(long accountId, decimal amount)
         {
-            _context.BankAccounts.Update(account);
-            _context.SaveChanges();
+            using var transaction = _context.Database.BeginTransaction(IsolationLevel.Serializable);
+
+            try
+            {
+                var account = _context.BankAccounts
+                    .FirstOrDefault(a => a.Id == accountId);
+
+                if (account == null || account.ReservedBalance < amount)
+                    return false;
+
+                account.ReservedBalance -= amount;
+                account.PendingCaptureBalance += amount;
+
+                _context.SaveChanges();
+                transaction.Commit();
+                return true;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
 
-        public bool MerchantIdExists(string merchantId)
+        public bool FinalizeCapture(long merchantAccountId, long customerAccountId, decimal amount)
         {
-            return _context.BankAccounts.Any(a => a.MerchantId == merchantId);
+            using var transaction = _context.Database.BeginTransaction(IsolationLevel.Serializable);
+
+            try
+            {
+                var merchantAccount = _context.BankAccounts
+                    .FirstOrDefault(a => a.Id == merchantAccountId && a.IsMerchantAccount);
+
+                var customerAccount = _context.BankAccounts
+                    .FirstOrDefault(a => a.Id == customerAccountId);
+
+                if (merchantAccount == null || customerAccount == null ||
+                    customerAccount.PendingCaptureBalance < amount)
+                    return false;
+
+                customerAccount.PendingCaptureBalance -= amount;
+                merchantAccount.Balance += amount;
+
+                _context.SaveChanges();
+                transaction.Commit();
+                return true;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
-    
-}
+
+        //ovo je za rollback
+        public bool ReleaseReservedFunds(long accountId, decimal amount)
+        {
+            using var transaction = _context.Database.BeginTransaction(IsolationLevel.Serializable);
+
+            try
+            {
+                var account = _context.BankAccounts
+                    .FirstOrDefault(a => a.Id == accountId);
+
+                if (account == null || account.ReservedBalance < amount)
+                    return false;
+
+                account.ReservedBalance -= amount;
+                account.AvailableBalance += amount;
+
+                _context.SaveChanges();
+                transaction.Commit();
+                return true;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        public BankAccount? GetMerchantByMerchantId(string merchantId)
+        {
+            return _context.BankAccounts
+                .Include(a => a.Customer)
+                .FirstOrDefault(a => a.MerchantId == merchantId && a.IsMerchantAccount);
+        }
+
+    }
 }

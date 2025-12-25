@@ -8,6 +8,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddScoped<BankAccountRepository>();
 builder.Services.AddScoped<PaymentTransactionRepository>();
 builder.Services.AddScoped<CardTokenRepository>();
+builder.Services.AddScoped<CardRepository>();
+builder.Services.AddScoped<CustomerRepository>();
 
 builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<CardService>();
