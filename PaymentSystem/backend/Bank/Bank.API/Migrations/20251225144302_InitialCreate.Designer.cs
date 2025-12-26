@@ -116,10 +116,6 @@ namespace Bank.API.Migrations
                         .IsRequired()
                         .HasColumnType("character varying(50)");
 
-                    b.Property<string>("CvvSalt")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("ExpiryMonth")
                         .IsRequired()

@@ -24,7 +24,7 @@ namespace Bank.API.Repositories
             var existingToken = _context.CardTokens
                 .FirstOrDefault(t => t.TransactionId == transactionId &&
                                    t.DeletedAt == null &&
-                                   t.ExpiresAt > DateTime.UtcNow);
+                                   t.ExpiresAt > DateTime.UtcNow.AddHours(-1));
 
             if (existingToken != null)
                 return existingToken;
@@ -33,7 +33,7 @@ namespace Bank.API.Repositories
             {
                 CardId = cardId,
                 TransactionId = transactionId,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(15)
+                ExpiresAt = DateTime.UtcNow.AddHours(-1).AddMinutes(45)
             };
 
             _context.CardTokens.Add(token);
@@ -53,9 +53,9 @@ namespace Bank.API.Repositories
             if (cardToken == null)
                 return null;
 
-            if (cardToken.ExpiresAt < DateTime.UtcNow)
+            if (cardToken.ExpiresAt < DateTime.UtcNow.AddHours(-1))
             {
-                cardToken.DeletedAt = DateTime.UtcNow;
+                cardToken.DeletedAt = DateTime.UtcNow.AddHours(-1);
                 _context.SaveChanges();
                 return null;
             }
@@ -84,7 +84,7 @@ namespace Bank.API.Repositories
             if (token == null)
                 return false;
 
-            token.DeletedAt = DateTime.UtcNow;
+            token.DeletedAt = DateTime.UtcNow.AddHours(-1);
 
             _context.SaveChanges();
             return true;
@@ -95,18 +95,18 @@ namespace Bank.API.Repositories
             return _context.CardTokens
                 .Any(t => t.TransactionId == transactionId &&
                          t.DeletedAt == null &&
-                         t.ExpiresAt > DateTime.UtcNow);
+                         t.ExpiresAt > DateTime.UtcNow.AddHours(-1));
         }
 
         public int CleanupExpiredTokens()
         {
             var expiredTokens = _context.CardTokens
-                .Where(t => t.ExpiresAt < DateTime.UtcNow && t.DeletedAt == null)
+                .Where(t => t.ExpiresAt < DateTime.UtcNow.AddHours(-1) && t.DeletedAt == null)
                 .ToList();
 
             foreach (var token in expiredTokens)
             {
-                token.DeletedAt = DateTime.UtcNow;
+                token.DeletedAt = DateTime.UtcNow.AddHours(-1);
             }
 
             return _context.SaveChanges();

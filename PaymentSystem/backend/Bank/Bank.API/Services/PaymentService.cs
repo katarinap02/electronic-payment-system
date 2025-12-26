@@ -75,6 +75,10 @@ namespace Bank.API.Services
                     throw new InvalidOperationException($"Duplicate STAN: {request.Stan}");
                 }
 
+                // Generiše PAYMENT_ID i PAYMENT_URL 
+                var paymentId = GenerateSecurePaymentId();
+                var paymentUrl = GeneratePaymentUrl(paymentId);
+
                 // Kreira transakciju (STAN za praćenje transakcije)
                 var transaction = _transactionRepo.CreateTransaction(
                     merchantId: request.MerchantId,
@@ -82,11 +86,10 @@ namespace Bank.API.Services
                     currency: request.Currency,
                     stan: request.Stan,
                     merchantTimestamp: request.PspTimestamp,
+                    paymentId: paymentId,
                     merchantAccountId: merchantAccount.Id);
 
-                // Generiše PAYMENT_ID i PAYMENT_URL 
-                var paymentId = GenerateSecurePaymentId();
-                var paymentUrl = GeneratePaymentUrl(paymentId);
+                
 
                 // 6. Sačuvaj PAYMENT_ID u transakciju
                 transaction.PaymentId = paymentId;
@@ -157,8 +160,8 @@ namespace Bank.API.Services
                     throw new ArgumentException("Invalid payment ID");
 
                 // Proverava da li je expired i da li je status Pending
-                if (!_transactionRepo.IsTransactionValid(transaction.Id))
-                    throw new InvalidOperationException("Transaction has expired");
+               // if (!_transactionRepo.IsTransactionValid(transaction.Id))
+               //     throw new InvalidOperationException("Transaction has expired");
 
                 // Validacija kartice, dodati posle proveru da se iznost nije promenio
                 if (!ValidateCardInformation(cardInfo, transaction))
@@ -175,7 +178,8 @@ namespace Bank.API.Services
                     throw new InvalidOperationException("Card has expired or invalid date format");
 
                 var cardHash = _cardService.GenerateCardHash(cardInfo.CardNumber);
-                var card = _cardRepo.FindCardByHash(cardHash); 
+                 var card = _cardRepo.FindCardByHash(cardHash); 
+               
 
                 if (card == null)
                     throw new InvalidOperationException("Card not found");
@@ -218,8 +222,8 @@ namespace Bank.API.Services
                     Amount = transaction.Amount,
                     Currency = transaction.Currency,
                     GlobalTransactionId = globalTransactionId,
-                    AcquirerTimestamp = DateTime.UtcNow,
-                    AuthorizedAt = DateTime.UtcNow,
+                    AcquirerTimestamp = DateTime.UtcNow.AddHours(-1),
+                    AuthorizedAt = DateTime.UtcNow.AddHours(-1),
                     Message = "Payment authorized successfully"
                 };
             }
@@ -363,7 +367,7 @@ namespace Bank.API.Services
         {
             // Format koji koriste mnoge banke: prefiks + timestamp + unique ID
             var bankPrefix = _configuration["BankSettings:Prefix"] ?? "ACQ";
-            var timestamp = DateTime.UtcNow.ToString("yyyyMMdd");
+            var timestamp = DateTime.UtcNow.AddHours(-1).ToString("yyyyMMdd");
             var uniqueId = Guid.NewGuid().ToString("N").Substring(0, 12).ToUpper();
 
             return $"{bankPrefix}{timestamp}{uniqueId}";

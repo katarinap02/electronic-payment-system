@@ -72,8 +72,6 @@ namespace Bank.API.Migrations
                     Type = table.Column<int>(type: "integer", nullable: false),
                     Status = table.Column<int>(type: "integer", nullable: false),
                     CustomerId = table.Column<string>(type: "character varying(50)", nullable: false),
-                    CvvSalt = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    PinAttempts = table.Column<int>(type: "integer", nullable: false),
                     IssuedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>

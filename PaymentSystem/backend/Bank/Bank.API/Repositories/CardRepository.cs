@@ -57,7 +57,7 @@ namespace Bank.API.Repositories
             if (m < 1 || m > 12)
                 return false;
 
-            var currentDate = DateTime.UtcNow;
+            var currentDate = DateTime.UtcNow.AddHours(-1);
             var expiryDate = new DateTime(2000 + y, m, 1).AddMonths(1).AddDays(-1);
 
             return expiryDate >= currentDate;
@@ -70,8 +70,7 @@ namespace Bank.API.Repositories
                 .FirstOrDefault(c => c.Id == cardId);
 
             return card != null &&
-                   card.Status == Card.CardStatus.ACTIVE &&
-                   card.PinAttempts < 3;
+                   card.Status == Card.CardStatus.ACTIVE;
         }
 
         public string GenerateCvvHash(string cvv, string salt)

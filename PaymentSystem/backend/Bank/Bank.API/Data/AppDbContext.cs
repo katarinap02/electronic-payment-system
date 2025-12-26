@@ -99,8 +99,6 @@ namespace Bank.API.Data
                     .HasMaxLength(2);
                 entity.Property(e => e.ExpiryYear)
                     .HasMaxLength(2);
-                entity.Property(e => e.CvvSalt)
-                    .HasMaxLength(128);
                 entity.Property(e => e.IssuedAt)
                     .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
@@ -126,8 +124,6 @@ namespace Bank.API.Data
                 entity.Property(e => e.Token)
                     .IsRequired()
                     .HasMaxLength(50);
-                entity.Property(e => e.CvvHash)
-                    .HasMaxLength(128);
 
                 entity.Property(e => e.CreatedAt)
                     .HasDefaultValueSql("CURRENT_TIMESTAMP");

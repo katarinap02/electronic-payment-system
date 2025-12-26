@@ -8,9 +8,9 @@
         public Card Card { get; set; }
         //public string? CvvHash { get; set; }
         public DateTime? CvvValidatedAt { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow.AddHours(-1);
         public DateTime? DeletedAt { get; set; }  // Soft delete za PCI
-        public DateTime ExpiresAt { get; set; } = DateTime.UtcNow.AddMinutes(15);
+        public DateTime ExpiresAt { get; set; } = DateTime.UtcNow.AddHours(-1).AddMinutes(15);
         public bool IsUsed { get; set; } = false;
         public long? TransactionId { get; set; } // Jedna kartica = jedna transakcija (stavka 4a: "ograničiti je na samo jedan pokušaj plaćanja")
         public PaymentTransaction? Transaction { get; set; }

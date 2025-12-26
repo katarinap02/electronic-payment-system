@@ -20,7 +20,9 @@ namespace Bank.API.Repositories
             string stan,
             DateTime merchantTimestamp,
             long merchantAccountId,
-            string? customerId = null)
+            string paymentId,
+            string? customerId = null
+            )
         {
             var merchantAccount = _context.BankAccounts
                 .FirstOrDefault(a => a.Id == merchantAccountId && a.IsMerchantAccount);
@@ -34,13 +36,14 @@ namespace Bank.API.Repositories
             var transaction = new PaymentTransaction
             {
                 MerchantId = merchantId,
+                PaymentId = paymentId,
                 Amount = amount,
                 Currency = currency,
                 Stan = stan,
-                MerchantTimestamp = merchantTimestamp,
+                MerchantTimestamp = merchantTimestamp.AddHours(-1),
                 MerchantAccountId = merchantAccountId,
-                PspTimestamp = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(15),
+                PspTimestamp = DateTime.UtcNow.AddHours(-1),
+                ExpiresAt = DateTime.UtcNow.AddMinutes(45).AddHours(-1),
                 CustomerId = customerId
             };
 
@@ -110,13 +113,13 @@ namespace Bank.API.Repositories
                 switch (status)
                 {
                     case PaymentTransaction.TransactionStatus.AUTHORIZED:
-                        paymentTransaction.AuthorizedAt = DateTime.UtcNow;
+                        paymentTransaction.AuthorizedAt = DateTime.UtcNow.AddHours(-1);
                         break;
                     case PaymentTransaction.TransactionStatus.CAPTURED:
-                        paymentTransaction.CapturedAt = DateTime.UtcNow;
+                        paymentTransaction.CapturedAt = DateTime.UtcNow.AddHours(-1);
                         break;
                     case PaymentTransaction.TransactionStatus.FAILED:
-                        paymentTransaction.FailedAt = DateTime.UtcNow;
+                        paymentTransaction.FailedAt = DateTime.UtcNow.AddHours(-1);
                         break;
                 }
 
@@ -138,7 +141,7 @@ namespace Bank.API.Repositories
                 return false;
 
             transaction.GlobalTransactionId = globalTransactionId;
-            transaction.AcquirerTimestamp = DateTime.UtcNow;
+            transaction.AcquirerTimestamp = DateTime.UtcNow.AddHours(-1);
 
             _context.SaveChanges();
             return true;
@@ -150,7 +153,7 @@ namespace Bank.API.Repositories
                 .FirstOrDefault(t => t.Id == transactionId);
 
             return transaction != null &&
-                   transaction.ExpiresAt > DateTime.UtcNow &&
+                   transaction.ExpiresAt > DateTime.UtcNow.AddHours(-1) &&
                    transaction.Status == PaymentTransaction.TransactionStatus.PENDING;
         }
 
@@ -175,7 +178,7 @@ namespace Bank.API.Repositories
         public int ExpireOldTransactions()
         {
             var expiredTransactions = _context.PaymentTransactions
-                .Where(t => t.ExpiresAt < DateTime.UtcNow &&
+                .Where(t => t.ExpiresAt < DateTime.UtcNow.AddHours(-1) &&
                            t.Status == PaymentTransaction.TransactionStatus.PENDING)
                 .ToList();
 

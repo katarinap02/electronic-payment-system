@@ -17,7 +17,7 @@ namespace Bank.API.Models
         public DateTime ExpiresAt { get; set; } //ogranici vremenski, stavka 4a
 
         //POKRIVA: "ACQUIRER_TIMESTAMP" (stavka 5), praćenje celokupnog toka
-        public DateTime AcquirerTimestamp { get; set; } = DateTime.UtcNow;
+        public DateTime AcquirerTimestamp { get; set; } = DateTime.UtcNow.AddHours(-1);
         public DateTime? AuthorizedAt { get; set; }  // Kada je kartica autorizovana
         public DateTime? CapturedAt { get; set; }    // Kada su sredstva rezervisana
         public DateTime? FailedAt { get; set; }

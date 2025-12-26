@@ -15,9 +15,9 @@ namespace Bank.API.Models
         public CardStatus Status { get; set; } = CardStatus.ACTIVE;
         public string CustomerId { get; set; }
         public Customer Customer { get; set; }
-        public string CvvSalt { get; set; }
-        public int PinAttempts { get; set; }
-        public DateTime IssuedAt { get; set; } = DateTime.UtcNow;
+        //public string CvvSalt { get; set; }
+        //public int PinAttempts { get; set; }
+        public DateTime IssuedAt { get; set; } = DateTime.UtcNow.AddHours(-1);
         public ICollection<CardToken> Tokens { get; set; } = new List<CardToken>();
 
         public enum CardType
