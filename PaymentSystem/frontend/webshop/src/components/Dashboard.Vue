@@ -3,46 +3,61 @@
     <h2 class="dashboard-title">Dashboard</h2>
     <p class="welcome-message">Welcome to your account!</p>
     
-    <div v-if="userEmail" class="user-info">
-      <p><strong>Logged in as:</strong> {{ userEmail }}</p>
+    <div v-if="authStore.isAuthenticated && authStore.user" class="user-info">
+      <p><strong>Logged in as:</strong> {{ authStore.userName }}</p>
+      <p class="user-email" v-if="authStore.user.email"><strong>Email:</strong> {{ authStore.user.email }}</p>
+    </div>
+
+    <div v-else class="user-info error">
+      <p>Unable to load user information. Please try logging in again.</p>
     </div>
     
-    <button @click="logout" class="logout-btn">
+    <button v-if="authStore.isAuthenticated" @click="handleLogout" class="logout-btn">
       Logout
     </button>
+
+    <button v-else @click="goToLogin" class="login-btn">
+      Login
+    </button>
+
+    <!-- Debug info (ukloniti posle testiranja) -->
+    <div class="debug-info">
+      <p>Auth State: {{ authStore.isAuthenticated ? 'Authenticated' : 'Not authenticated' }}</p>
+      <p>User exists: {{ authStore.user ? 'Yes' : 'No' }}</p>
+      <p>Token exists: {{ authStore.token ? 'Yes' : 'No' }}</p>
+    </div>
   </div>
 </template>
 
-<script>
-export default {
-  name: 'Dashboard',
+<script setup>
+import { useAuthStore } from '@/stores/auth';
+import { useRouter } from 'vue-router';
+import { onMounted } from 'vue';
+
+const authStore = useAuthStore();
+const router = useRouter();
+
+onMounted(() => {
+  console.log('Dashboard mounted - Auth state:', {
+    isAuthenticated: authStore.isAuthenticated,
+    user: authStore.user,
+    token: authStore.token,
+    userName: authStore.userName
+  });
   
-  data() {
-    return {
-      userEmail: ''
-    };
-  },
-  
-  mounted() {
-    // Get user info from localStorage if available
-    const user = localStorage.getItem('user');
-    if (user) {
-      try {
-        const userData = JSON.parse(user);
-        this.userEmail = userData.name + ' ' + userData.surname || '';
-      } catch (e) {
-        console.error('Error parsing user data:', e);
-      }
-    }
-  },
-  
-  methods: {
-    logout() {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      this.$router.push('/login');
-    }
+  // Ako nema user-a, probaj da učitaš iz localStorage direktno
+  if (!authStore.user && authStore.token) {
+    const userFromStorage = localStorage.getItem('user');
+    console.log('User from localStorage:', userFromStorage);
   }
+});
+
+const handleLogout = () => {
+  authStore.logout();
+};
+
+const goToLogin = () => {
+  router.push('/login');
 };
 </script>
 
@@ -94,6 +109,55 @@ export default {
 
 .user-info strong {
   color: #2c3e50;
+}
+
+.user-info.error {
+  background-color: #fff3cd;
+  border-left: 4px solid #ffc107;
+}
+
+.user-info.error p {
+  color: #856404;
+}
+
+.user-email {
+  margin-top: 10px;
+  font-size: 0.95rem;
+}
+
+.login-btn {
+  padding: 12px 28px;
+  background: linear-gradient(135deg, #4f46e5, #4338ca);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 8px rgba(79, 70, 229, 0.25);
+  margin-top: 20px;
+  min-width: 150px;
+}
+
+.login-btn:hover {
+  background: linear-gradient(135deg, #4338ca, #3730a3);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 12px rgba(79, 70, 229, 0.3);
+}
+
+.debug-info {
+  margin-top: 30px;
+  padding: 15px;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.debug-info p {
+  margin: 5px 0;
+  color: #666;
 }
 
 .logout-btn {
