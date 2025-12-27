@@ -1,8 +1,19 @@
-// Bank/Bank.API/Program.cs
-using Microsoft.EntityFrameworkCore;
 using Bank.API.Data;
+using Bank.API.Repositories;
+using Bank.API.Services;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddScoped<BankAccountRepository>();
+builder.Services.AddScoped<PaymentTransactionRepository>();
+builder.Services.AddScoped<CardTokenRepository>();
+builder.Services.AddScoped<CardRepository>();
+builder.Services.AddScoped<CustomerRepository>();
+
+builder.Services.AddScoped<PaymentService>();
+builder.Services.AddScoped<CardService>();
+builder.Services.AddScoped<SeedDataService>();
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -11,13 +22,25 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+//Namestanje CORS-a
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:5173")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+});
+
 var app = builder.Build();
 
-// AUTO-CREATE DATABASE
+// PRIMENI MIGRACIJE AUTOMATSKI
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    dbContext.Database.EnsureCreated();
+    dbContext.Database.Migrate();
 }
 
 // Configure the HTTP request pipeline.
@@ -27,7 +50,26 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// SEED TEST DATA
+using (var scope = app.Services.CreateScope())
+{
+    var seedService = scope.ServiceProvider.GetRequiredService<SeedDataService>();
+    try
+    {
+        seedService.InitializeTestData();
+        Console.WriteLine("Test data seeded successfully!");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error seeding test data: {ex.Message}");
+    }
+}
+
+app.UseRouting();
+app.UseCors("AllowFrontend");
+
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

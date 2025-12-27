@@ -38,7 +38,7 @@ namespace WebShop.API.Services
                 issuer: _issuer,
                 audience: _audience,
                 claims: claims,
-                expires: DateTime.UtcNow.AddHours(3), // Token traje 3 sata
+                expires: DateTime.UtcNow.AddHours(2), // Token traje 3 sata
                 signingCredentials: credentials
             );
 
