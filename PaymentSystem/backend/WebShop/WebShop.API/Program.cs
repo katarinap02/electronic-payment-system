@@ -8,11 +8,15 @@ using WebShop.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// User services
 builder.Services.AddScoped<UserRepository>();
-
 builder.Services.AddScoped<PasswordService>();
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<AuthService>();
+
+// Vehicle services
+builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
+builder.Services.AddScoped<IVehicleService, VehicleService>();
 
 //Namestanje CORS-a
 builder.Services.AddCors(options =>
@@ -53,11 +57,29 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Apply migrations and seed data
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    dbContext.Database.Migrate();
-    dbContext.Database.EnsureCreated();
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    
+    try
+    {
+        var dbContext = services.GetRequiredService<AppDbContext>();
+        
+        logger.LogInformation("Applying database migrations...");
+        dbContext.Database.Migrate();
+        logger.LogInformation("Database migrations applied successfully.");
+        
+        logger.LogInformation("Seeding vehicles...");
+        VehicleSeedData.SeedVehicles(dbContext);
+        logger.LogInformation("Vehicles seeded successfully.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+        throw;
+    }
 }
 
 if (app.Environment.IsDevelopment())
