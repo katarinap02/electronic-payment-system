@@ -14,6 +14,10 @@ builder.Services.AddScoped<PasswordService>();
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<AuthService>();
 
+// Vehicle services
+builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
+builder.Services.AddScoped<IVehicleService, VehicleService>();
+
 // Insurance and Services
 builder.Services.AddScoped<IInsurancePackageRepository, InsurancePackageRepository>();
 builder.Services.AddScoped<IInsurancePackageService, InsurancePackageService>();
@@ -72,6 +76,10 @@ using (var scope = app.Services.CreateScope())
         logger.LogInformation("Applying database migrations...");
         dbContext.Database.Migrate();
         logger.LogInformation("Database migrations applied successfully.");
+        
+        logger.LogInformation("Seeding vehicles...");
+        VehicleSeedData.SeedVehicles(dbContext);
+        logger.LogInformation("Vehicles seeded successfully.");
         
         logger.LogInformation("Seeding insurance packages...");
         InsurancePackageSeedData.SeedInsurancePackages(dbContext);

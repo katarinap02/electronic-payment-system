@@ -3,7 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 const routes = [
   {
     path: '/',
-    redirect: '/login'
+    redirect: '/vehicles'
   },
   {
     path: '/login',
@@ -19,6 +19,26 @@ const routes = [
     path: '/dashboard',
     name: 'Dashboard',
     component: () => import('@/components/Dashboard.vue')
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('@/components/Profile.vue')
+  },
+  {
+    path: '/vehicles',
+    name: 'VehicleList',
+    component: () => import('@/components/VehicleList.vue')
+  },
+  {
+    path: '/vehicles/:id',
+    name: 'VehicleDetail',
+    component: () => import('@/components/VehicleDetail.vue')
+  },
+  {
+    path: '/admin/vehicles',
+    name: 'AdminVehicles',
+    component: () => import('@/components/AdminVehicles.vue')
   }
 ];
 

@@ -1,0 +1,396 @@
+<template>
+  <div class="vehicle-detail-page">
+    <div v-if="loading" class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading vehicle details...</p>
+    </div>
+
+    <div v-else-if="error" class="error-container">
+      <p class="error-message">{{ error }}</p>
+      <button class="btn-back" @click="goBack">Go Back</button>
+    </div>
+
+    <div v-else-if="vehicle" class="vehicle-detail">
+      <button class="btn-back-arrow" @click="goBack">
+        &larr; Back to Vehicles
+      </button>
+
+      <div class="detail-grid">
+        <div class="detail-image-section">
+          <img 
+            :src="vehicle.imageUrl || 'https://via.placeholder.com/600x400?text=No+Image'" 
+            :alt="`${vehicle.brand} ${vehicle.model}`"
+          />
+        </div>
+
+        <div class="detail-info-section">
+          <div class="detail-header">
+            <div>
+              <span class="category-badge">{{ vehicle.category }}</span>
+              <h1>{{ vehicle.brand }} {{ vehicle.model }}</h1>
+              <p class="year">Year: {{ vehicle.year }}</p>
+            </div>
+            <span class="status-badge" :class="getStatusClass(vehicle.status)">
+              {{ vehicle.status }}
+            </span>
+          </div>
+
+          <div class="price-section">
+            <div class="price">
+              <span class="price-amount">${{ vehicle.pricePerDay.toFixed(2) }}</span>
+              <span class="price-label">per day</span>
+            </div>
+          </div>
+
+          <div class="specs-section">
+            <h2>Specifications</h2>
+            <div class="specs-grid">
+              <div class="spec-item">
+                <span class="spec-label">Transmission</span>
+                <span class="spec-value">{{ vehicle.transmission }}</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Fuel Type</span>
+                <span class="spec-value">{{ vehicle.fuelType }}</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Seats</span>
+                <span class="spec-value">{{ vehicle.seats }} passengers</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Mileage</span>
+                <span class="spec-value">{{ formatMileage(vehicle.mileage) }}</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Color</span>
+                <span class="spec-value">{{ vehicle.color }}</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">License Plate</span>
+                <span class="spec-value">{{ vehicle.licensePlate }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="vehicle.description" class="description-section">
+            <h2>Description</h2>
+            <p>{{ vehicle.description }}</p>
+          </div>
+
+          <div class="action-section">
+            <button 
+              class="btn-rent" 
+              @click="rentVehicle"
+              :disabled="vehicle.status !== 'Available'"
+            >
+              {{ vehicle.status === 'Available' ? 'Rent Now' : 'Not Available' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { vehicleApi } from '../services/vehicleService';
+
+const route = useRoute();
+const router = useRouter();
+
+const vehicle = ref(null);
+const loading = ref(false);
+const error = ref(null);
+
+const fetchVehicleDetails = async () => {
+  loading.value = true;
+  error.value = null;
+
+  try {
+    const response = await vehicleApi.getVehicleById(route.params.id);
+    vehicle.value = response.data.data || response.data;
+  } catch (err) {
+    console.error('Error fetching vehicle details:', err);
+    error.value = 'Failed to load vehicle details. Please try again.';
+  } finally {
+    loading.value = false;
+  }
+};
+
+const formatMileage = (mileage) => {
+  return `${mileage.toLocaleString()} km`;
+};
+
+const getStatusClass = (status) => {
+  const statusMap = {
+    'Available': 'status-available',
+    'Rented': 'status-rented',
+    'Maintenance': 'status-maintenance',
+    'Unavailable': 'status-unavailable'
+  };
+  return statusMap[status] || '';
+};
+
+const goBack = () => {
+  router.push('/vehicles');
+};
+
+const rentVehicle = () => {
+  // TODO: Implement rent functionality
+  alert('Rent functionality will be implemented soon!');
+};
+
+onMounted(() => {
+  fetchVehicleDetails();
+});
+</script>
+
+<style scoped>
+.vehicle-detail-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.btn-back-arrow {
+  padding: 10px 20px;
+  background: white;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-bottom: 30px;
+  font-size: 15px;
+}
+
+.btn-back-arrow:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  background: white;
+  border-radius: 12px;
+  padding: 40px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.detail-image-section img {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.detail-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.detail-header h1 {
+  font-size: 32px;
+  margin: 12px 0 8px 0;
+  color: #1f2937;
+}
+
+.year {
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.category-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  background: #e0e7ff;
+  color: #4f46e5;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status-badge {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: white;
+}
+
+.status-available {
+  background: #10b981;
+}
+
+.status-rented {
+  background: #f59e0b;
+}
+
+.status-maintenance {
+  background: #ef4444;
+}
+
+.status-unavailable {
+  background: #6b7280;
+}
+
+.price-section {
+  padding: 24px;
+  background: #f9fafb;
+  border-radius: 12px;
+}
+
+.price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.price-amount {
+  font-size: 42px;
+  font-weight: 700;
+  color: #4f46e5;
+}
+
+.price-label {
+  font-size: 18px;
+  color: #6b7280;
+}
+
+.specs-section h2,
+.description-section h2 {
+  font-size: 20px;
+  margin-bottom: 16px;
+  color: #1f2937;
+}
+
+.specs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.spec-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.spec-label {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.spec-value {
+  font-size: 16px;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.description-section p {
+  color: #4b5563;
+  line-height: 1.7;
+  font-size: 15px;
+}
+
+.action-section {
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-rent {
+  width: 100%;
+  padding: 16px;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn-rent:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.btn-rent:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  gap: 20px;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #4f46e5;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 18px;
+}
+
+.btn-back {
+  padding: 12px 24px;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-back:hover {
+  background: #4338ca;
+}
+
+@media (max-width: 968px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+
+  .detail-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .specs-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
