@@ -9,6 +9,8 @@ namespace WebShop.API.Data
 
         public DbSet<User> Users { get; set; }
         public DbSet<Vehicle> Vehicles { get; set; }
+        public DbSet<InsurancePackage> InsurancePackages { get; set; }
+        public DbSet<AdditionalService> AdditionalServices { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -45,6 +47,33 @@ namespace WebShop.API.Data
                 entity.Property(e => e.Color).IsRequired().HasMaxLength(50);
                 entity.Property(e => e.ImageUrl).HasMaxLength(500);
                 entity.Property(e => e.Description).HasMaxLength(1000);
+                entity.Property(e => e.CreatedAt).IsRequired();
+                entity.Property(e => e.UpdatedAt).IsRequired();
+            });
+
+            // InsurancePackage entity configuration
+            modelBuilder.Entity<InsurancePackage>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).IsRequired().HasMaxLength(1000);
+                entity.Property(e => e.PricePerDay).IsRequired().HasColumnType("decimal(18,2)");
+                entity.Property(e => e.CoverageLimit).IsRequired().HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Deductible).IsRequired().HasColumnType("decimal(18,2)");
+                entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+                entity.Property(e => e.CreatedAt).IsRequired();
+                entity.Property(e => e.UpdatedAt).IsRequired();
+            });
+
+            // AdditionalService entity configuration
+            modelBuilder.Entity<AdditionalService>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.PricePerDay).IsRequired().HasColumnType("decimal(18,2)");
+                entity.Property(e => e.IsAvailable).IsRequired().HasDefaultValue(true);
+                entity.Property(e => e.IconUrl).HasMaxLength(500);
                 entity.Property(e => e.CreatedAt).IsRequired();
                 entity.Property(e => e.UpdatedAt).IsRequired();
             });

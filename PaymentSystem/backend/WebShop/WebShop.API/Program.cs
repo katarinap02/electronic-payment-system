@@ -18,15 +18,22 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 
+// Insurance and Services
+builder.Services.AddScoped<IInsurancePackageRepository, InsurancePackageRepository>();
+builder.Services.AddScoped<IInsurancePackageService, InsurancePackageService>();
+builder.Services.AddScoped<IAdditionalServiceRepository, AdditionalServiceRepository>();
+builder.Services.AddScoped<IAdditionalServiceService, AdditionalServiceService>();
+
 //Namestanje CORS-a
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5173") 
-                  .AllowAnyHeader() 
-                  .AllowAnyMethod(); 
+            policy.WithOrigins("http://localhost:5173")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
         });
 });
 
@@ -74,6 +81,14 @@ using (var scope = app.Services.CreateScope())
         logger.LogInformation("Seeding vehicles...");
         VehicleSeedData.SeedVehicles(dbContext);
         logger.LogInformation("Vehicles seeded successfully.");
+        
+        logger.LogInformation("Seeding insurance packages...");
+        InsurancePackageSeedData.SeedInsurancePackages(dbContext);
+        logger.LogInformation("Insurance packages seeded successfully.");
+        
+        logger.LogInformation("Seeding additional services...");
+        AdditionalServiceSeedData.SeedAdditionalServices(dbContext);
+        logger.LogInformation("Additional services seeded successfully.");
     }
     catch (Exception ex)
     {
@@ -88,12 +103,15 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseRouting();
+// IMPORTANT: UseCors must be before UseRouting
 app.UseCors("AllowFrontend");
+
+app.UseRouting();
 
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();

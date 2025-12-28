@@ -80,15 +80,33 @@
           <div class="action-section">
             <button 
               class="btn-rent" 
-              @click="rentVehicle"
+              @click="openRentalModal"
               :disabled="vehicle.status !== 'Available'"
             >
-              {{ vehicle.status === 'Available' ? 'Rent Now' : 'Not Available' }}
+              {{ vehicle.status === 'Available' ? 'Add to Cart' : 'Not Available' }}
             </button>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Rental Modal -->
+    <RentalModal
+      :is-open="isModalOpen"
+      :vehicle="vehicle"
+      @close="closeRentalModal"
+      @confirm="handleRentalConfirm"
+    />
+
+    <!-- Success Notification -->
+    <Transition name="notification">
+      <div v-if="showSuccessNotification" class="success-notification">
+        <div class="notification-content">
+          <span class="icon">✓</span>
+          <span class="message">Vehicle added to cart successfully!</span>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -96,6 +114,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { vehicleApi } from '../services/vehicleService';
+import RentalModal from './RentalModal.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -103,6 +122,8 @@ const router = useRouter();
 const vehicle = ref(null);
 const loading = ref(false);
 const error = ref(null);
+const isModalOpen = ref(false);
+const showSuccessNotification = ref(false);
 
 const fetchVehicleDetails = async () => {
   loading.value = true;
@@ -137,9 +158,30 @@ const goBack = () => {
   router.push('/vehicles');
 };
 
-const rentVehicle = () => {
-  // TODO: Implement rent functionality
-  alert('Rent functionality will be implemented soon!');
+const openRentalModal = () => {
+  isModalOpen.value = true;
+};
+
+const closeRentalModal = () => {
+  isModalOpen.value = false;
+};
+
+const handleRentalConfirm = (rentalData) => {
+  console.log('Rental confirmed:', rentalData);
+  
+  // Close modal
+  isModalOpen.value = false;
+  
+  // Show success notification
+  showSuccessNotification.value = true;
+  
+  // Hide notification after 3 seconds
+  setTimeout(() => {
+    showSuccessNotification.value = false;
+  }, 3000);
+  
+  // TODO: Add to cart logic - save to cart store or send to backend
+  // Example: cartStore.addRental(rentalData);
 };
 
 onMounted(() => {
@@ -378,6 +420,54 @@ onMounted(() => {
   background: #4338ca;
 }
 
+/* Success Notification */
+.success-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+}
+
+.notification-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  background: #10b981;
+  color: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.notification-content .icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  font-weight: bold;
+}
+
+/* Notification transitions */
+.notification-enter-active,
+.notification-leave-active {
+  transition: all 0.3s ease;
+}
+
+.notification-enter-from {
+  opacity: 0;
+  transform: translateX(100px);
+}
+
+.notification-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
 @media (max-width: 968px) {
   .detail-grid {
     grid-template-columns: 1fr;
@@ -391,6 +481,12 @@ onMounted(() => {
 
   .specs-grid {
     grid-template-columns: 1fr;
+  }
+
+  .success-notification {
+    top: 10px;
+    right: 10px;
+    left: 10px;
   }
 }
 </style>
