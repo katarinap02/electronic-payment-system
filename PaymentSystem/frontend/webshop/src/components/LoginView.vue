@@ -29,12 +29,14 @@
 </template>
 
 <script>
+import { useAuthStore } from '@/stores/auth';
+
 export default {
   data() {
     return {
       form: {
-        Email: '',
-        Password: ''
+        email: '',
+        password: ''
       },
       error: '',
       isLoading: false
@@ -47,24 +49,20 @@ export default {
       this.error = '';
       
       try {
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(this.form)
+        const authStore = useAuthStore();
+        const result = await authStore.login({
+          email: this.form.email,
+          password: this.form.password
         });
         
-        const data = await response.json();
-        
-        if (data.success) {
-          localStorage.setItem('token', data.data.token);
-          localStorage.setItem('user', JSON.stringify(data.data.user));
-          
+        if (result.success) {
           this.$router.push('/dashboard');
         } else {
-          this.error = data.message || 'Login failed';
+          this.error = result.error || 'Login failed';
         }
       } catch (err) {
         this.error = 'Error, try again.';
+        console.error('Login error:', err);
       } finally {
         this.isLoading = false;
       }

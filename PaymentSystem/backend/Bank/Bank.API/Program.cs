@@ -2,6 +2,7 @@ using Bank.API.Data;
 using Bank.API.Repositories;
 using Bank.API.Services;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +17,11 @@ builder.Services.AddScoped<CardService>();
 builder.Services.AddScoped<SeedDataService>();
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    });
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("BankDb")));
 builder.Services.AddEndpointsApiExplorer();
@@ -28,7 +33,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5173")
+            policy.WithOrigins("http://localhost:5174", "http://frontend-bank:5173")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });

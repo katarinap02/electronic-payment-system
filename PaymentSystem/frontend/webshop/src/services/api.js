@@ -2,7 +2,8 @@ import axios from 'axios';
 
 // Use environment variable or fall back to localhost
 // For Docker: use 'http://backend:5000/api' or 'http://host.docker.internal:5000/api'
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+//const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'; //bez dokera
+const API_URL = '/api';  // Sa dokerom
 
 console.log('API URL configured as:', API_URL);
 

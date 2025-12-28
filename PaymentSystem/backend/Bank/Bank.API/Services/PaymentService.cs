@@ -342,10 +342,10 @@ namespace Bank.API.Services
                 .Replace("=", "")
                 .Substring(0, 16);
         }
-         //ovo promeniti kad bude trebalo
+        //ovo promeniti kad bude trebalo
         private string GeneratePaymentUrl(string paymentId)
         {
-            var baseUrl = _configuration["PaymentSettings:BaseUrl"] ?? "https://bank.example.com";
+            var baseUrl = _configuration["PaymentSettings:BaseUrl"] ?? "http://localhost:5174";
             return $"{baseUrl}/payment/{paymentId}";
         }
 

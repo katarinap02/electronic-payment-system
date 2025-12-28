@@ -16,6 +16,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
 
   # PostgreSQL za Banku
   postgres-bank:
@@ -34,6 +36,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
 
   # WebShop API 
   webshop-api:
@@ -50,6 +54,8 @@ services:
       - ASPNETCORE_URLS=http://+:80
     ports:
       - "5000:80"
+    networks:
+      - app-network
 
   # Bank API 
   bank-api:
@@ -66,6 +72,8 @@ services:
       - ASPNETCORE_URLS=http://+:80
     ports:
       - "5001:80"
+    networks:
+      - app-network
 
   # Vue Frontend za WebShop
   frontend-webshop:
@@ -83,6 +91,8 @@ services:
     depends_on:
       - webshop-api
     command: npm run dev -- --host 0.0.0.0
+    networks:
+      - app-network
 
   # Vue Frontend za Banku
   frontend-bank:
@@ -100,7 +110,13 @@ services:
     depends_on:
       - bank-api
     command: npm run dev -- --host 0.0.0.0
+    networks:
+      - app-network
 
 volumes:
   postgres-webshop-data:
   postgres-bank-data:
+
+networks:
+  app-network:
+    driver: bridge
