@@ -46,18 +46,16 @@ const loading = ref(false)
 const error = ref('')
 
 const handleLogin = async () => {
-  loading.value = true
-  error.value = ''
-  
-  const success = await authStore.login(email.value, password.value)
-  
-  if (success) {
+  try {
+    loading.value = true
+    error.value = ''
+    await authStore.login(email.value, password.value)
     router.push('/dashboard')
-  } else {
-    error.value = 'Invalid credentials. Please try again.'
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Invalid credentials. Please try again.'
+  } finally {
+    loading.value = false
   }
-  
-  loading.value = false
 }
 </script>
 

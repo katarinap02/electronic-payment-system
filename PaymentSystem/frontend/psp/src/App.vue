@@ -1,11 +1,13 @@
 <template>
   <div id="app">
-    <nav class="navbar">
+    <nav class="navbar" v-if="authStore.isAuthenticated">
       <div class="container">
         <router-link to="/" class="logo">PSP Admin</router-link>
-        <div class="nav-links" v-if="authStore.isAuthenticated">
+        <div class="nav-links">
           <router-link to="/dashboard">Dashboard</router-link>
-          <router-link to="/webshops">WebShops</router-link>
+          <router-link to="/webshops" v-if="authStore.isSuperAdmin">WebShops</router-link>
+          <router-link to="/my-webshops" v-if="authStore.isAdmin">My WebShops</router-link>
+          <span class="user-info">{{ authStore.user?.name }} ({{ authStore.user?.role }})</span>
           <button @click="logout" class="logout-btn">Logout</button>
         </div>
       </div>
@@ -81,6 +83,11 @@ body {
 
 .nav-links a:hover {
   color: #3498db;
+}
+
+.user-info {
+  color: #ecf0f1;
+  font-size: 0.9rem;
 }
 
 .logout-btn {

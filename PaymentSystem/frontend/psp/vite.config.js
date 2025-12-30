@@ -16,6 +16,14 @@ export default defineConfig({
   },
   server: {
     port: 5174,
+    host: true,
+    watch: {
+      usePolling: true,
+    },
+    hmr: {
+      host: 'localhost',
+      port: 5174,
+    },
     proxy: {
       '/api': {
         target: 'http://psp-api:80',
