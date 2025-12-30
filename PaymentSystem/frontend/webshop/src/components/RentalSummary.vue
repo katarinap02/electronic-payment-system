@@ -115,20 +115,37 @@
           <div class="total-breakdown">
             <div class="breakdown-line">
               <span>Vehicle ({{ rentalData.days }} days)</span>
-              <span>€{{ vehicleTotal.toFixed(2) }}</span>
+              <span>{{ currencySymbol }}{{ vehicleTotal.toFixed(2) }}</span>
             </div>
             <div class="breakdown-line" v-if="rentalData.insurance">
               <span>Insurance ({{ rentalData.days }} days)</span>
-              <span>€{{ insuranceTotal.toFixed(2) }}</span>
+              <span>{{ currencySymbol }}{{ insuranceTotal.toFixed(2) }}</span>
             </div>
             <div class="breakdown-line" v-if="rentalData.services && rentalData.services.length > 0">
               <span>Services ({{ rentalData.days }} days)</span>
-              <span>€{{ servicesTotal.toFixed(2) }}</span>
+              <span>{{ currencySymbol }}{{ servicesTotal.toFixed(2) }}</span>
             </div>
           </div>
           <div class="total-line">
             <span class="total-label">Total Amount</span>
-            <span class="total-amount">€{{ grandTotal.toFixed(2) }}</span>
+            <span class="total-amount">{{ currencySymbol }}{{ grandTotal.toFixed(2) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Currency Selection -->
+      <div class="summary-section">
+        <div class="currency-card">
+          <h4 class="section-heading">💰 Payment Currency</h4>
+          <div class="currency-options">
+            <label class="currency-option" :class="{ selected: selectedCurrency === 0 }">
+              <input type="radio" name="currency" :value="0" v-model="selectedCurrency" />
+              <span class="currency-name">EUR (Euro)</span>
+            </label>
+            <label class="currency-option" :class="{ selected: selectedCurrency === 1 }">
+              <input type="radio" name="currency" :value="1" v-model="selectedCurrency" />
+              <span class="currency-name">USD (US Dollar)</span>
+            </label>
           </div>
         </div>
       </div>
@@ -139,14 +156,16 @@
         Back
       </button>
       <button class="btn-confirm" @click="handleConfirm">
-        Add to Cart
+        Proceed to Payment
       </button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
+
+const selectedCurrency = ref(0); // Default EUR
 
 const props = defineProps({
   vehicle: {
@@ -184,6 +203,11 @@ const grandTotal = computed(() => {
   return vehicleTotal.value + insuranceTotal.value + servicesTotal.value;
 });
 
+const currencySymbol = computed(() => {
+  const symbols = { 0: '€', 1: '$' };
+  return symbols[selectedCurrency.value] || '€';
+});
+
 const formatDate = (dateString) => {
   if (!dateString) return '';
   const date = new Date(dateString);
@@ -203,6 +227,7 @@ const handleConfirm = () => {
   emit('confirm', {
     vehicle: props.vehicle,
     ...props.rentalData,
+    currency: selectedCurrency.value,
     totals: {
       vehicle: vehicleTotal.value,
       insurance: insuranceTotal.value,
@@ -549,6 +574,53 @@ const handleConfirm = () => {
   background: #059669;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.currency-card {
+  background: #f9fafb;
+  padding: 20px;
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+}
+
+.currency-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.currency-option {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.currency-option:hover {
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+
+.currency-option.selected {
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+
+.currency-option input[type="radio"] {
+  margin-right: 12px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.currency-name {
+  font-weight: 500;
+  color: #1f2937;
 }
 
 @media (max-width: 768px) {

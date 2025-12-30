@@ -22,6 +22,14 @@ public class WebShopRepository : IWebShopRepository
             .FirstOrDefaultAsync(w => w.Id == id);
     }
 
+    public async Task<WebShop?> GetByIdWithPaymentMethodsAsync(int id)
+    {
+        return await _context.WebShops
+            .Include(w => w.WebShopPaymentMethods)
+                .ThenInclude(wp => wp.PaymentMethod)
+            .FirstOrDefaultAsync(w => w.Id == id);
+    }
+
     public async Task<WebShop?> GetByMerchantIdAsync(string merchantId)
     {
         return await _context.WebShops

@@ -39,6 +39,21 @@ const routes = [
     path: '/admin/vehicles',
     name: 'AdminVehicles',
     component: () => import('@/components/AdminVehicles.vue')
+  },
+  {
+    path: '/payment-success',
+    name: 'PaymentSuccess',
+    component: () => import('@/components/PaymentSuccess.vue')
+  },
+  {
+    path: '/payment-failed',
+    name: 'PaymentFailed',
+    component: () => import('@/components/PaymentFailed.vue')
+  },
+  {
+    path: '/payment-error',
+    name: 'PaymentError',
+    component: () => import('@/components/PaymentError.vue')
   }
 ];
 

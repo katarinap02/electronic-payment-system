@@ -8,23 +8,16 @@ var builder = WebApplication.CreateBuilder(args);
 // Add Infrastructure layer (DbContext, Repositories, Services)
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// HTTP Client for Bank and WebShop communication
-builder.Services.AddHttpClient("BankAPI", client =>
-{
-    client.BaseAddress = new Uri(builder.Configuration["BankApiUrl"] ?? "http://bank-api:80");
-});
-builder.Services.AddHttpClient("WebShopAPI", client =>
-{
-    client.BaseAddress = new Uri(builder.Configuration["WebShopApiUrl"] ?? "http://webshop-api:80");
-});
-
 // CORS configuration
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5174")
+            policy.WithOrigins(
+                    "http://localhost:5174", // PSP Frontend
+                    "http://localhost:5173"  // WebShop Frontend
+                  )
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials();

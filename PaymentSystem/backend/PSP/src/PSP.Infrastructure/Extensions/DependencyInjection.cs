@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.AddScoped<IWebShopRepository, WebShopRepository>();
         services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
         services.AddScoped<IWebShopAdminRepository, WebShopAdminRepository>();
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
 
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<IJwtService, JwtService>();
@@ -32,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<IWebShopService, WebShopService>();
         services.AddScoped<IWebShopAdminService, WebShopAdminService>();
         services.AddScoped<IPaymentMethodService, PaymentMethodService>();
+        services.AddScoped<PaymentService>();
 
         return services;
     }
