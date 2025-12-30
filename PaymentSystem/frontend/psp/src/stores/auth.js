@@ -7,6 +7,8 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref(JSON.parse(localStorage.getItem('psp_user') || 'null'))
 
   const isAuthenticated = computed(() => !!token.value)
+  const isSuperAdmin = computed(() => user.value?.role === 'SuperAdmin')
+  const isAdmin = computed(() => user.value?.role === 'Admin')
 
   async function login(email, password) {
     try {
@@ -15,6 +17,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = {
         email: response.email,
         name: response.name,
+        surname: response.surname,
         role: response.role
       }
       
@@ -24,7 +27,7 @@ export const useAuthStore = defineStore('auth', () => {
       return true
     } catch (error) {
       console.error('Login failed:', error)
-      return false
+      throw error
     }
   }
 
@@ -39,6 +42,8 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     user,
     isAuthenticated,
+    isSuperAdmin,
+    isAdmin,
     login,
     logout
   }

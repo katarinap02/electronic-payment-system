@@ -23,7 +23,13 @@ const router = createRouter({
       path: '/webshops',
       name: 'webshops',
       component: () => import('../views/WebShopsView.vue'),
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true, requiresSuperAdmin: true }
+    },
+    {
+      path: '/my-webshops',
+      name: 'my-webshops',
+      component: () => import('../views/MyWebShopsView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true }
     }
   ]
 })
@@ -33,6 +39,10 @@ router.beforeEach((to, from, next) => {
   
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login')
+  } else if (to.meta.requiresSuperAdmin && !authStore.isSuperAdmin) {
+    next('/dashboard')
+  } else if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    next('/dashboard')
   } else if (to.path === '/login' && authStore.isAuthenticated) {
     next('/dashboard')
   } else {
