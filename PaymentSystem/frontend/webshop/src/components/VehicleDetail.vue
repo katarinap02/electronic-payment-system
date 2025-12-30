@@ -114,6 +114,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { vehicleApi } from '../services/vehicleService';
+import { pspService } from '../services/pspService';
 import RentalModal from './RentalModal.vue';
 
 const route = useRoute();
@@ -166,22 +167,33 @@ const closeRentalModal = () => {
   isModalOpen.value = false;
 };
 
-const handleRentalConfirm = (rentalData) => {
+const handleRentalConfirm = async (rentalData) => {
   console.log('Rental confirmed:', rentalData);
   
-  // Close modal
-  isModalOpen.value = false;
-  
-  // Show success notification
-  showSuccessNotification.value = true;
-  
-  // Hide notification after 3 seconds
-  setTimeout(() => {
-    showSuccessNotification.value = false;
-  }, 3000);
-  
-  // TODO: Add to cart logic - save to cart store or send to backend
-  // Example: cartStore.addRental(rentalData);
+  try {
+    // Generate unique order ID
+    const orderId = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Initialize payment with PSP
+    const paymentResponse = await pspService.initializePayment({
+      orderId: orderId,
+      amount: rentalData.totals.total,
+      currency: rentalData.currency // 0=RSD, 1=EUR, 2=USD
+    });
+    
+    console.log('Payment initialized:', paymentResponse);
+    
+    // Close modal
+    isModalOpen.value = false;
+    
+    // Redirect to PSP payment page (URL already contains access token)
+    window.location.href = paymentResponse.paymentUrl;
+    
+  } catch (error) {
+    console.error('Payment initialization failed:', error);
+    alert('Failed to initialize payment. Please try again.');
+    isModalOpen.value = false;
+  }
 };
 
 onMounted(() => {

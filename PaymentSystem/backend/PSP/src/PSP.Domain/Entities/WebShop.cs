@@ -9,6 +9,9 @@ public class WebShop
     public required string Url { get; set; }
     public required string ApiKey { get; set; }
     public required string MerchantId { get; set; }
+    public string? SuccessUrl { get; set; }
+    public string? FailedUrl { get; set; }
+    public string? ErrorUrl { get; set; }
     public WebShopStatus Status { get; set; } = WebShopStatus.Active;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
