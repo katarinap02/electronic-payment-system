@@ -98,15 +98,15 @@ services:
   # PSP API 
   psp-api:
     build:
-      context: ./backend
-      dockerfile: PSP/PSP.API/Dockerfile
+      context: ./backend/PSP
+      dockerfile: Dockerfile
     container_name: psp-api
     depends_on:
       postgres-psp:
         condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__PSPDb=Host=postgres-psp;Database=psp;Username=postgres;Password=super;Port=5432
+      - ConnectionStrings__DefaultConnection=Host=postgres-psp;Database=psp;Username=postgres;Password=super;Port=5432
       - ASPNETCORE_URLS=http://+:80
       - BankApiUrl=http://bank-api:80
       - WebShopApiUrl=http://webshop-api:80

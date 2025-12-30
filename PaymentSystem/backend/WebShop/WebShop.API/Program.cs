@@ -73,10 +73,15 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var dbContext = services.GetRequiredService<AppDbContext>();
+        var passwordService = services.GetRequiredService<PasswordService>();
         
         logger.LogInformation("Applying database migrations...");
         dbContext.Database.Migrate();
         logger.LogInformation("Database migrations applied successfully.");
+        
+        logger.LogInformation("Seeding admin user...");
+        UserSeedData.SeedAdminUser(dbContext, passwordService);
+        logger.LogInformation("Admin user seeded successfully.");
         
         logger.LogInformation("Seeding vehicles...");
         VehicleSeedData.SeedVehicles(dbContext);
