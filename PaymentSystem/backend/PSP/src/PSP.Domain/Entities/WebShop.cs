@@ -15,4 +15,5 @@ public class WebShop
     
     // Navigation properties
     public ICollection<WebShopPaymentMethod> WebShopPaymentMethods { get; set; } = new List<WebShopPaymentMethod>();
+    public ICollection<WebShopAdmin> Admins { get; set; } = new List<WebShopAdmin>();
 }

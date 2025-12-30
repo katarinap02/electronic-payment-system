@@ -15,8 +15,10 @@ public static class SeedData
         var passwordService = scope.ServiceProvider.GetRequiredService<IPasswordService>();
 
         await SeedSuperAdminAsync(context, passwordService);
+        await SeedAdminAsync(context, passwordService);
         await SeedPaymentMethodsAsync(context);
         await SeedWebShopsAsync(context);
+        await SeedAdminWebshopsAsync(context);
     }
 
     private static async Task SeedSuperAdminAsync(AppDbContext context, IPasswordService passwordService)
@@ -34,6 +36,24 @@ public static class SeedData
             };
 
             context.Users.Add(superAdmin);
+            await context.SaveChangesAsync();
+        }
+    }
+
+    private static async Task SeedAdminAsync(AppDbContext context, IPasswordService passwordService)
+    {
+        if (!context.Users.Any(u => u.Email == "admin@webshop.com"))
+        {
+            var admin = new User
+            {
+                Email = "admin@webshop.com",
+                PasswordHash = passwordService.HashPassword("Admin123!"),
+                Name = "WebShop",
+                Surname = "Admin",
+                Role = UserRole.Admin,
+                CreatedAt = DateTime.UtcNow
+            };
+            context.Users.Add(admin);
             await context.SaveChangesAsync();
         }
     }
@@ -100,6 +120,28 @@ public static class SeedData
             }
 
             await context.SaveChangesAsync();
+        }
+    }
+
+    private static async Task SeedAdminWebshopsAsync(AppDbContext context)
+    {
+        var adminUser = context.Users.FirstOrDefault(u => u.Email == "admin@webshop.com");
+        var webShop = context.WebShops.FirstOrDefault(w => w.MerchantId == "WEBSHOP_001");
+
+        if (adminUser != null && webShop != null)
+        {
+            if (!context.WebShopAdmins.Any(wa => wa.UserId == adminUser.Id && wa.WebShopId == webShop.Id))
+            {
+                var webShopAdmin = new WebShopAdmin
+                {
+                    UserId = adminUser.Id,
+                    WebShopId = webShop.Id,
+                    AssignedAt = DateTime.UtcNow
+                };
+
+                context.WebShopAdmins.Add(webShopAdmin);
+                await context.SaveChangesAsync();
+            }
         }
     }
 }

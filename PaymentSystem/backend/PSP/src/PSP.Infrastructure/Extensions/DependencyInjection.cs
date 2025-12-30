@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PSP.Application.Interfaces.Repositories;
 using PSP.Application.Interfaces.Services;
 using PSP.Infrastructure.Persistence;
+using PSP.Infrastructure.Persistence.Repositories;
 using PSP.Infrastructure.Repositories;
 using PSP.Infrastructure.Security;
 using PSP.Infrastructure.Services;
@@ -22,12 +23,14 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IWebShopRepository, WebShopRepository>();
         services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
+        services.AddScoped<IWebShopAdminRepository, WebShopAdminRepository>();
 
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IAuthService, AuthService>();
 
         services.AddScoped<IWebShopService, WebShopService>();
+        services.AddScoped<IWebShopAdminService, WebShopAdminService>();
         services.AddScoped<IPaymentMethodService, PaymentMethodService>();
 
         return services;

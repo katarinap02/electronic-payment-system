@@ -1,6 +1,7 @@
 using PSP.Application.Common;
 using PSP.Application.DTOs.PaymentMethods;
 using PSP.Application.DTOs.WebShops;
+using PSP.Application.Extensions;
 using PSP.Application.Interfaces.Repositories;
 using PSP.Application.Interfaces.Services;
 using PSP.Domain.Entities;
@@ -24,7 +25,7 @@ public class WebShopService : IWebShopService
     public async Task<Result<IEnumerable<WebShopResponse>>> GetAllWebShopsAsync()
     {
         var webShops = await _webShopRepository.GetAllAsync();
-        var result = webShops.Select(MapToResponse);
+        var result = webShops.Select(ws => ws.ToWebShopResponse());
         return Result.Success(result.AsEnumerable());
     }
 
@@ -35,7 +36,7 @@ public class WebShopService : IWebShopService
         if (webShop == null)
             return Result.Failure<WebShopResponse>("WebShop not found");
 
-        return Result.Success(MapToResponse(webShop));
+        return Result.Success(webShop.ToWebShopResponse());
     }
 
     public async Task<Result<WebShopResponse>> CreateWebShopAsync(CreateWebShopRequest request)
@@ -55,7 +56,23 @@ public class WebShopService : IWebShopService
         };
 
         var createdWebShop = await _webShopRepository.CreateAsync(webShop);
-        return Result.Success(MapToResponse(createdWebShop));
+        
+        // Automatically add Credit Card payment method by default
+        var creditCardMethod = (await _paymentMethodRepository.GetAllAsync())
+            .FirstOrDefault(pm => pm.Type == PaymentMethodType.CreditCard);
+        
+        if (creditCardMethod != null)
+        {
+            await _paymentMethodRepository.AddWebShopPaymentMethodAsync(new WebShopPaymentMethod
+            {
+                WebShopId = createdWebShop.Id,
+                PaymentMethodId = creditCardMethod.Id,
+                IsEnabled = true,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+        
+        return Result.Success(createdWebShop.ToWebShopResponse());
     }
 
     public async Task<Result<WebShopResponse>> UpdateWebShopAsync(int id, UpdateWebShopRequest request)
@@ -69,7 +86,7 @@ public class WebShopService : IWebShopService
         webShop.Status = Enum.Parse<WebShopStatus>(request.Status);
 
         var updatedWebShop = await _webShopRepository.UpdateAsync(webShop);
-        return Result.Success(MapToResponse(updatedWebShop));
+        return Result.Success(updatedWebShop.ToWebShopResponse());
     }
 
     public async Task<Result> DeleteWebShopAsync(int id)
@@ -109,9 +126,18 @@ public class WebShopService : IWebShopService
 
     public async Task<Result> RemovePaymentMethodFromWebShopAsync(int webShopId, int paymentMethodId)
     {
+        var webShop = await _webShopRepository.GetByIdAsync(webShopId);
+        if (webShop == null)
+            return Result.Failure("WebShop not found");
+
         var existing = await _paymentMethodRepository.GetWebShopPaymentMethodAsync(webShopId, paymentMethodId);
         if (existing == null)
             return Result.Failure("Payment method not found for this webshop");
+
+        // Check if this is the last payment method
+        var enabledPaymentMethodsCount = webShop.WebShopPaymentMethods.Count(wp => wp.IsEnabled);
+        if (enabledPaymentMethodsCount <= 1)
+            return Result.Failure("Cannot remove the last payment method. WebShop must have at least one payment method.");
 
         await _paymentMethodRepository.RemoveWebShopPaymentMethodAsync(existing);
         return Result.Success();
@@ -125,41 +151,8 @@ public class WebShopService : IWebShopService
 
         var methods = webShop.WebShopPaymentMethods
             .Where(wp => wp.IsEnabled)
-            .Select(wp => new PaymentMethodDTO
-            {
-                Id = wp.PaymentMethod.Id,
-                Name = wp.PaymentMethod.Name,
-                Code = wp.PaymentMethod.Code,
-                Type = wp.PaymentMethod.Type.ToString(),
-                Description = wp.PaymentMethod.Description,
-                IsEnabled = wp.IsEnabled
-            });
+            .Select(wp => wp.PaymentMethod.ToPaymentMethodDTO(wp.IsEnabled));
 
         return Result.Success(methods.AsEnumerable());
-    }
-
-    private WebShopResponse MapToResponse(WebShop webShop)
-    {
-        return new WebShopResponse
-        {
-            Id = webShop.Id,
-            Name = webShop.Name,
-            Url = webShop.Url,
-            MerchantId = webShop.MerchantId,
-            ApiKey = webShop.ApiKey,
-            Status = webShop.Status.ToString(),
-            PaymentMethods = webShop.WebShopPaymentMethods
-                .Where(wp => wp.IsEnabled)
-                .Select(wp => new PaymentMethodDTO
-                {
-                    Id = wp.PaymentMethod.Id,
-                    Name = wp.PaymentMethod.Name,
-                    Code = wp.PaymentMethod.Code,
-                    Type = wp.PaymentMethod.Type.ToString(),
-                    Description = wp.PaymentMethod.Description,
-                    IsEnabled = wp.IsEnabled
-                }).ToList(),
-            CreatedAt = webShop.CreatedAt
-        };
     }
 }

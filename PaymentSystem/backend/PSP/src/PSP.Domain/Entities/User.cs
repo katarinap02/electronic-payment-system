@@ -12,4 +12,7 @@ public class User
     public UserRole Role { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+    
+    // Navigation properties
+    public ICollection<WebShopAdmin> ManagedWebShops { get; set; } = new List<WebShopAdmin>();
 }

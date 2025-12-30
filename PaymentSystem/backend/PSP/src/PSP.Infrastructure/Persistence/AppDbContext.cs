@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<WebShop> WebShops { get; set; }
     public DbSet<PaymentMethod> PaymentMethods { get; set; }
     public DbSet<WebShopPaymentMethod> WebShopPaymentMethods { get; set; }
+    public DbSet<WebShopAdmin> WebShopAdmins { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -15,6 +15,10 @@ namespace PSP.API.Controllers
             _authService = authService;
         }
 
+        /// <summary>
+        /// Login with email and password
+        /// </summary>
+        /// <remarks>Required Role: None (Public endpoint)</remarks>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
