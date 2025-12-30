@@ -18,10 +18,14 @@ public class AdminWebShopController : ControllerBase
         _webShopAdminService = webShopAdminService;
     }
 
-    /// <summary>
-    /// Add payment method to WebShop (Admin can only manage their own WebShops)
-    /// </summary>
-    /// <remarks>Required Role: Admin (must be admin of this WebShop)</remarks>
+    [HttpGet("my-webshops")]
+    public async Task<IActionResult> GetMyManagedWebShops()
+    {
+        var userId = int.Parse(User.FindFirst("userId")?.Value ?? "0");
+        var result = await _webShopAdminService.GetUserManagedWebShopsAsync(userId);
+        return Ok(result.Value);
+    }
+
     [HttpPost("{webShopId}/payment-methods/{paymentMethodId}")]
     public async Task<IActionResult> AddPaymentMethod(int webShopId, int paymentMethodId)
     {
@@ -43,10 +47,6 @@ public class AdminWebShopController : ControllerBase
         return Ok(new { message = "Payment method added successfully" });
     }
 
-    /// <summary>
-    /// Remove payment method from WebShop (Admin can only manage their own WebShops)
-    /// </summary>
-    /// <remarks>Required Role: Admin (must be admin of this WebShop)</remarks>
     [HttpDelete("{webShopId}/payment-methods/{paymentMethodId}")]
     public async Task<IActionResult> RemovePaymentMethod(int webShopId, int paymentMethodId)
     {
@@ -68,10 +68,6 @@ public class AdminWebShopController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>
-    /// Get payment methods for WebShop (Admin can only view their own WebShops)
-    /// </summary>
-    /// <remarks>Required Role: Admin (must be admin of this WebShop)</remarks>
     [HttpGet("{webShopId}/payment-methods")]
     public async Task<IActionResult> GetWebShopPaymentMethods(int webShopId)
     {

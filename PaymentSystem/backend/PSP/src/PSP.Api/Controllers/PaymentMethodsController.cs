@@ -5,7 +5,8 @@ using PSP.Application.Interfaces.Services;
 namespace PSP.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/superadmin/payment-methods")]
+    [Authorize(Roles = "SuperAdmin")]
     public class PaymentMethodsController : ControllerBase
     {
         private readonly IPaymentMethodService _paymentMethodService;
@@ -19,10 +20,6 @@ namespace PSP.API.Controllers
             _webShopService = webShopService;
         }
 
-        /// <summary>
-        /// Get all payment methods
-        /// </summary>
-        /// <remarks>Required Role: None (Public endpoint)</remarks>
         [HttpGet]
         public async Task<IActionResult> GetAllPaymentMethods()
         {
@@ -30,10 +27,6 @@ namespace PSP.API.Controllers
             return Ok(result.Value);
         }
 
-        /// <summary>
-        /// Get active payment methods only
-        /// </summary>
-        /// <remarks>Required Role: None (Public endpoint)</remarks>
         [HttpGet("active")]
         public async Task<IActionResult> GetActivePaymentMethods()
         {
@@ -41,12 +34,7 @@ namespace PSP.API.Controllers
             return Ok(result.Value);
         }
 
-        /// <summary>
-        /// Get payment methods for specific WebShop
-        /// </summary>
-        /// <remarks>Required Role: SuperAdmin</remarks>
         [HttpGet("webshops/{webShopId}")]
-        [Authorize(Roles = "SuperAdmin")]
         public async Task<IActionResult> GetWebShopPaymentMethods(int webShopId)
         {
             var result = await _webShopService.GetWebShopPaymentMethodsAsync(webShopId);
@@ -59,12 +47,7 @@ namespace PSP.API.Controllers
             return Ok(result.Value);
         }
 
-        /// <summary>
-        /// Add payment method to WebShop
-        /// </summary>
-        /// <remarks>Required Role: SuperAdmin</remarks>
         [HttpPost("webshops/{webShopId}/{paymentMethodId}")]
-        [Authorize(Roles = "SuperAdmin")]
         public async Task<IActionResult> AddPaymentMethodToWebShop(int webShopId, int paymentMethodId)
         {
             var result = await _webShopService.AddPaymentMethodToWebShopAsync(webShopId, paymentMethodId);
@@ -77,12 +60,7 @@ namespace PSP.API.Controllers
             return Ok(new { message = "Payment method added successfully" });
         }
 
-        /// <summary>
-        /// Remove payment method from WebShop
-        /// </summary>
-        /// <remarks>Required Role: SuperAdmin</remarks>
         [HttpDelete("webshops/{webShopId}/{paymentMethodId}")]
-        [Authorize(Roles = "SuperAdmin")]
         public async Task<IActionResult> RemovePaymentMethodFromWebShop(int webShopId, int paymentMethodId)
         {
             var result = await _webShopService.RemovePaymentMethodFromWebShopAsync(webShopId, paymentMethodId);

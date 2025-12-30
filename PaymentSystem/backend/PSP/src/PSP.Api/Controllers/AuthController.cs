@@ -5,7 +5,7 @@ using PSP.Application.Interfaces.Services;
 namespace PSP.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/auth")]
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
@@ -15,10 +15,6 @@ namespace PSP.API.Controllers
             _authService = authService;
         }
 
-        /// <summary>
-        /// Login with email and password
-        /// </summary>
-        /// <remarks>Required Role: None (Public endpoint)</remarks>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
