@@ -39,6 +39,26 @@ services:
     networks:
       - app-network
 
+  # PostgreSQL za PSP
+  postgres-psp:
+    image: postgres:15-alpine
+    container_name: psp-db
+    environment:
+      POSTGRES_DB: psp
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: super
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres-psp-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
   # WebShop API 
   webshop-api:
     build:
@@ -75,6 +95,26 @@ services:
     networks:
       - app-network
 
+  # PSP API 
+  psp-api:
+    build:
+      context: ./backend
+      dockerfile: PSP/PSP.API/Dockerfile
+    container_name: psp-api
+    depends_on:
+      postgres-psp:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__PSPDb=Host=postgres-psp;Database=psp;Username=postgres;Password=super;Port=5432
+      - ASPNETCORE_URLS=http://+:80
+      - BankApiUrl=http://bank-api:80
+      - WebShopApiUrl=http://webshop-api:80
+    ports:
+      - "5002:80"
+    networks:
+      - app-network
+
   # Vue Frontend za WebShop
   frontend-webshop:
     build:
@@ -101,7 +141,7 @@ services:
       dockerfile: Dockerfile
     container_name: frontend-bank
     ports:
-      - "5174:5173"
+      - "5172:5173"
     volumes:
       - ./frontend/bank:/app
       - /app/node_modules
@@ -113,9 +153,29 @@ services:
     networks:
       - app-network
 
+  # Vue Frontend za PSP
+  frontend-psp:
+    build:
+      context: ./frontend/psp
+      dockerfile: Dockerfile
+    container_name: frontend-psp
+    ports:
+      - "5174:5174"
+    volumes:
+      - ./frontend/psp:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:5002
+    depends_on:
+      - psp-api
+    command: npm run dev -- --host 0.0.0.0
+    networks:
+      - app-network
+
 volumes:
   postgres-webshop-data:
   postgres-bank-data:
+  postgres-psp-data:
 
 networks:
   app-network:
