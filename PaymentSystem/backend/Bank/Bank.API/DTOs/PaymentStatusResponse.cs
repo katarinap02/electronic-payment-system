@@ -10,5 +10,6 @@
         public DateTime AcquirerTimestamp { get; set; }
         public DateTime? AuthorizedAt { get; set; }
         public string Message { get; set; }
+        public string? RedirectUrl { get; set; }
     }
 }

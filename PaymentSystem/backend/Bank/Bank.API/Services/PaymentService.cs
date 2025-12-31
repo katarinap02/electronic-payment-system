@@ -87,7 +87,10 @@ namespace Bank.API.Services
                     stan: request.Stan,
                     merchantTimestamp: request.PspTimestamp,
                     paymentId: paymentId,
-                    merchantAccountId: merchantAccount.Id);
+                    merchantAccountId: merchantAccount.Id,
+                    successUrl: request.SuccessUrl,
+                    failedUrl: request.FailedUrl,
+                    errorUrl: request.ErrorUrl);
 
                 
 
@@ -215,6 +218,10 @@ namespace Bank.API.Services
 
                 _logger.LogInformation($"Card payment authorized: {globalTransactionId} for Amount: {transaction.Amount}");
 
+                // Extract PSP Payment ID from STAN (format: PSP-{id}-{timestamp})
+                var stanParts = transaction.Stan.Split('-');
+                var pspPaymentId = stanParts.Length > 1 ? stanParts[1] : "0";
+
                 return new PaymentStatusResponse
                 {
                     PaymentId = cardInfo.PaymentId,
@@ -224,7 +231,8 @@ namespace Bank.API.Services
                     GlobalTransactionId = globalTransactionId,
                     AcquirerTimestamp = DateTime.UtcNow.AddHours(-1),
                     AuthorizedAt = DateTime.UtcNow.AddHours(-1),
-                    Message = "Payment authorized successfully"
+                    Message = "Payment authorized successfully",
+                    RedirectUrl = _configuration["PSPFrontendUrl"] + $"/payment/{pspPaymentId}?status=success&bankPaymentId={transaction.PaymentId}"
                 };
             }
             catch (Exception ex)
@@ -345,7 +353,7 @@ namespace Bank.API.Services
         //ovo promeniti kad bude trebalo
         private string GeneratePaymentUrl(string paymentId)
         {
-            var baseUrl = _configuration["PaymentSettings:BaseUrl"] ?? "http://localhost:5174";
+            var baseUrl = _configuration["PaymentSettings:BaseUrl"] ?? "http://localhost:5172";
             return $"{baseUrl}/payment/{paymentId}";
         }
 

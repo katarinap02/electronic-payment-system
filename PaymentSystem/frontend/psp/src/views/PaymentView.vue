@@ -66,12 +66,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+import { useAuthStore } from '@/stores/auth'
 
+const auth = useAuthStore()
 const route = useRoute()
-const router = useRouter()
 
 const payment = ref(null)
 const loading = ref(false)
@@ -82,6 +83,8 @@ const loadPaymentDetails = async () => {
   loading.value = true
   error.value = null
 
+  auth.logout()
+
   try {
     const token = route.query.token
     const response = await axios.get(`http://localhost:5002/api/payments/${route.params.id}?token=${token}`)
@@ -91,6 +94,7 @@ const loadPaymentDetails = async () => {
     console.error('Failed to load payment:', err)
     error.value = err.response?.data?.message || 'Failed to load payment details'
     // If unauthorized, redirect to error page
+    debugger
     if (err.response?.status === 401) {
       window.location.href = 'http://localhost:5173/payment-error?errorCode=UNAUTHORIZED&errorMessage=Invalid or expired payment link'
     }
@@ -103,77 +107,72 @@ const selectPaymentMethod = async (paymentMethodId) => {
   selecting.value = true
   
   try {
-    await axios.post(`http://localhost:5002/api/payments/${route.params.id}/select-method`, {
+    // Step 1: Select payment method on PSP
+    const pspResponse = await axios.post(`http://localhost:5002/api/payments/${route.params.id}/select-method`, {
       paymentMethodId: paymentMethodId
     })
     
-    // Redirect to bank or next step
-    redirectToBank()
+    console.log('PSP Response:', pspResponse.data)
+    
+    // Step 2: Call Bank API directly to get payment form URL
+    const bankRequest = {
+      merchantId: pspResponse.data.merchantId,
+      amount: pspResponse.data.amount,
+      currency: pspResponse.data.currency,
+      stan: pspResponse.data.stan,
+      pspTimestamp: pspResponse.data.pspTimestamp,
+      successUrl: pspResponse.data.successUrl,
+      failedUrl: pspResponse.data.failedUrl,
+      errorUrl: pspResponse.data.errorUrl
+    }
+    
+    console.log('Bank Request:', bankRequest)
+    
+    const bankResponse = await axios.post('http://localhost:5001/api/payment/initiate', bankRequest)
+    
+    console.log('Bank Response:', bankResponse.data)
+    
+    // Step 3: Redirect to bank payment form
+    if (bankResponse.data.paymentUrl) {
+      debugger
+      window.location.href = bankResponse.data.paymentUrl
+    } else {
+      throw new Error('Bank payment URL not received')
+    }
+
   } catch (err) {
     console.error('Failed to select payment method:', err)
-    alert(err.response?.data?.message || 'Failed to select payment method')
+    console.error('Error details:', err.response?.data)
+    alert(err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to select payment method')
     selecting.value = false
   }
 }
 
-const redirectToBank = () => {
-  // TODO: Redirect to bank payment page with payment ID
-}
-
-const cancelPayment = async () => {
-  if (!payment.value || payment.value.status !== 'Pending') {
-    return
+onMounted(async () => {
+  // Check if returning from bank with payment status
+  const status = route.query.status
+  const bankPaymentId = route.query.bankPaymentId
+  
+  if (status && bankPaymentId) {
+    // User is returning from bank, notify PSP backend and redirect to WebShop
+    try {
+      const response = await axios.get(`http://localhost:5002/api/payments/${route.params.id}/bank-callback`, {
+        params: { status, paymentId: bankPaymentId }
+      })
+      
+      // Backend returns redirect URL to WebShop
+      if (response.data && response.data.redirectUrl) {
+        window.location.href = response.data.redirectUrl
+        return
+      }
+    } catch (err) {
+      console.error('Failed to process bank callback:', err)
+      error.value = 'Failed to process payment result'
+    }
   }
   
-  try {
-    await axios.post(`http://localhost:5002/api/payments/${route.params.id}/cancel`)
-    console.log('Payment cancelled')
-  } catch (err) {
-    console.error('Failed to cancel payment:', err)
-  }
-}
-
-const handleBeforeUnload = (event) => {
-  // Cancel payment synchronously when user closes tab/refreshes
-  if (payment.value && payment.value.status === 'Pending') {
-    navigator.sendBeacon(`http://localhost:5002/api/payments/${route.params.id}/cancel`, '')
-  }
-}
-
-let isLeavingToFailedPage = false
-
-onBeforeRouteLeave(async (to, from, next) => {
-  // Allow navigation to failed/error pages without cancelling
-  if (isLeavingToFailedPage || to.path.includes('/payment-')) {
-    next()
-    return
-  }
-  
-  // User is navigating away - cancel payment and redirect to failed page
-  if (payment.value && payment.value.status === 'Pending') {
-    await cancelPayment()
-    isLeavingToFailedPage = true
-    next(false) // Cancel current navigation
-    router.push({
-      path: '/payment-failed',
-      query: { orderId: payment.value?.merchantOrderId }
-    }).then(() => {
-      window.location.href = 'http://localhost:5173/payment-failed?orderId=' + payment.value?.merchantOrderId
-    })
-  } else {
-    next()
-  }
-})
-
-onMounted(() => {
+  // Normal payment page load
   loadPaymentDetails()
-  // Add beforeunload listener for tab close/refresh
-  window.addEventListener('beforeunload', handleBeforeUnload)
-})
-
-onBeforeUnmount(() => {
-  // Remove beforeunload listener
-  window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 </script>
 

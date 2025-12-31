@@ -109,7 +109,7 @@ namespace Bank.API.Services
                 PendingCaptureBalance = 0,
                 Currency = "EUR",
                 IsMerchantAccount = true,
-                MerchantId = "MERCHANT_PSP_001", // Ovo je MERCHANT_ID iz Tabele 2
+                MerchantId = "WEBSHOP_001", // Must match WebShop.MerchantId in PSP
                 CustomerId = merchant.Id,
                 Customer = merchant
             };
