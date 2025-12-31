@@ -87,7 +87,10 @@ namespace Bank.API.Services
                     stan: request.Stan,
                     merchantTimestamp: request.PspTimestamp,
                     paymentId: paymentId,
-                    merchantAccountId: merchantAccount.Id);
+                    merchantAccountId: merchantAccount.Id,
+                    successUrl: request.SuccessUrl,
+                    failedUrl: request.FailedUrl,
+                    errorUrl: request.ErrorUrl);
 
                 
 
@@ -224,7 +227,8 @@ namespace Bank.API.Services
                     GlobalTransactionId = globalTransactionId,
                     AcquirerTimestamp = DateTime.UtcNow.AddHours(-1),
                     AuthorizedAt = DateTime.UtcNow.AddHours(-1),
-                    Message = "Payment authorized successfully"
+                    Message = "Payment authorized successfully",
+                    RedirectUrl = transaction.SuccessUrl + $"?paymentId={transaction.PaymentId}"
                 };
             }
             catch (Exception ex)
@@ -345,7 +349,7 @@ namespace Bank.API.Services
         //ovo promeniti kad bude trebalo
         private string GeneratePaymentUrl(string paymentId)
         {
-            var baseUrl = _configuration["PaymentSettings:BaseUrl"] ?? "http://localhost:5174";
+            var baseUrl = _configuration["PaymentSettings:BaseUrl"] ?? "http://localhost:5172";
             return $"{baseUrl}/payment/{paymentId}";
         }
 

@@ -35,6 +35,8 @@ public static class DependencyInjection
         services.AddScoped<IPaymentMethodService, PaymentMethodService>();
         services.AddScoped<PaymentService>();
 
+        services.AddHttpClient<PaymentService>();
+
         return services;
     }
 }

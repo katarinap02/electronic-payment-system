@@ -7,6 +7,7 @@ namespace WebShop.API.Data
     {
         public static void SeedAdminUser(AppDbContext context, PasswordService passwordService)
         {
+            // Seed Admin user
             if (!context.Users.Any(u => u.Email == "admin@webshop.com"))
             {
                 var adminUser = new User
@@ -19,8 +20,24 @@ namespace WebShop.API.Data
                 };
 
                 context.Users.Add(adminUser);
-                context.SaveChanges();
             }
+
+            // Seed test customer user - Petar Petrović (matching Bank seed data)
+            if (!context.Users.Any(u => u.Email == "petar.petrovic@example.com"))
+            {
+                var customerUser = new User
+                {
+                    Email = "petar.petrovic@example.com",
+                    PasswordHash = passwordService.HashPassword("Petar123!"),
+                    Name = "Petar",
+                    Surname = "Petrović",
+                    Role = UserRole.Customer
+                };
+
+                context.Users.Add(customerUser);
+            }
+
+            context.SaveChanges();
         }
     }
 }

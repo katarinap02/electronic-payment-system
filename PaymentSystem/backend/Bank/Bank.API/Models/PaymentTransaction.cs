@@ -31,6 +31,9 @@ namespace Bank.API.Models
         public Customer? Customer { get; set; }
         public long? CardId { get; set; }           // Koja FIZIČKA kartica
         public Card? Card { get; set; }
+        public string? SuccessUrl { get; set; }     // PSP callback URL for success
+        public string? FailedUrl { get; set; }      // PSP callback URL for failed
+        public string? ErrorUrl { get; set; }       // PSP callback URL for error
         public enum TransactionStatus
         {
             PENDING,      // Kreirana, čeka unos kartice

@@ -21,7 +21,10 @@ namespace Bank.API.Repositories
             DateTime merchantTimestamp,
             long merchantAccountId,
             string paymentId,
-            string? customerId = null
+            string? customerId = null,
+            string? successUrl = null,
+            string? failedUrl = null,
+            string? errorUrl = null
             )
         {
             var merchantAccount = _context.BankAccounts
@@ -44,7 +47,10 @@ namespace Bank.API.Repositories
                 MerchantAccountId = merchantAccountId,
                 PspTimestamp = DateTime.UtcNow.AddHours(-1),
                 ExpiresAt = DateTime.UtcNow.AddMinutes(45).AddHours(-1),
-                CustomerId = customerId
+                CustomerId = customerId,
+                SuccessUrl = successUrl,
+                FailedUrl = failedUrl,
+                ErrorUrl = errorUrl
             };
 
             _context.PaymentTransactions.Add(transaction);

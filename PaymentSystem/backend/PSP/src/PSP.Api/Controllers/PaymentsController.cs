@@ -86,8 +86,8 @@ public class PaymentsController : ControllerBase
     {
         try
         {
-            await _paymentService.SelectPaymentMethodAsync(id, request.PaymentMethodId);
-            return Ok(new { message = "Payment method selected successfully" });
+            var bankRequestData = await _paymentService.SelectPaymentMethodAsync(id, request.PaymentMethodId);
+            return Ok(bankRequestData);
         }
         catch (InvalidOperationException ex)
         {
@@ -106,6 +106,24 @@ public class PaymentsController : ControllerBase
         {
             await _paymentService.CancelPaymentAsync(id);
             return Ok(new { message = "Payment cancelled" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "An error occurred", error = ex.Message });
+        }
+    }
+
+    [HttpGet("{id}/bank-callback")]
+    public async Task<ActionResult> HandleBankCallback(int id, [FromQuery] string status, [FromQuery] string? paymentId)
+    {
+        try
+        {
+            var redirectUrl = await _paymentService.HandleBankCallbackAsync(id, status, paymentId);
+            return Redirect(redirectUrl);
         }
         catch (InvalidOperationException ex)
         {

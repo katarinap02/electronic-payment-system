@@ -7,5 +7,8 @@
         public string Currency { get; set; }
         public string Stan { get; set; }
         public DateTime PspTimestamp { get; set; }
+        public string SuccessUrl { get; set; }
+        public string FailedUrl { get; set; }
+        public string ErrorUrl { get; set; }
     }
 }
