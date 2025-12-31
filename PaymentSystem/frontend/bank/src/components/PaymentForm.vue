@@ -133,8 +133,11 @@ export default {
       try {
         const response = await axios.post('/api/payment/process', this.cardInfo);
         console.log('Payment response:', response.data);
-        
-        if (response.data.success) {
+
+        if (response.data.redirectUrl) {
+          // Redirect to PSP frontend URL
+          window.location.href = response.data.redirectUrl;
+        } else if (response.data.success) {
           this.$router.push(`/payment/success/${this.paymentId}`);
         } else {
           this.error = response.data.error || 'Payment failed';

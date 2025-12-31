@@ -218,6 +218,10 @@ namespace Bank.API.Services
 
                 _logger.LogInformation($"Card payment authorized: {globalTransactionId} for Amount: {transaction.Amount}");
 
+                // Extract PSP Payment ID from STAN (format: PSP-{id}-{timestamp})
+                var stanParts = transaction.Stan.Split('-');
+                var pspPaymentId = stanParts.Length > 1 ? stanParts[1] : "0";
+
                 return new PaymentStatusResponse
                 {
                     PaymentId = cardInfo.PaymentId,
@@ -228,7 +232,7 @@ namespace Bank.API.Services
                     AcquirerTimestamp = DateTime.UtcNow.AddHours(-1),
                     AuthorizedAt = DateTime.UtcNow.AddHours(-1),
                     Message = "Payment authorized successfully",
-                    RedirectUrl = transaction.SuccessUrl + $"?paymentId={transaction.PaymentId}"
+                    RedirectUrl = _configuration["PSPFrontendUrl"] + $"/payment/{pspPaymentId}?status=success&bankPaymentId={transaction.PaymentId}"
                 };
             }
             catch (Exception ex)

@@ -123,7 +123,10 @@ public class PaymentsController : ControllerBase
         try
         {
             var redirectUrl = await _paymentService.HandleBankCallbackAsync(id, status, paymentId);
-            return Redirect(redirectUrl);
+            
+            // Return JSON with redirectUrl instead of direct redirect
+            // This allows frontend to handle the redirection
+            return Ok(new { redirectUrl });
         }
         catch (InvalidOperationException ex)
         {

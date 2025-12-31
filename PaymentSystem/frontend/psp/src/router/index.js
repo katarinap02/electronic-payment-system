@@ -35,15 +35,6 @@ const router = createRouter({
       path: '/payment/:id',
       name: 'payment',
       component: () => import('../views/PaymentView.vue'),
-      beforeEnter: (to, from, next) => {
-        // Check if token is present in query params
-        if (!to.query.token) {
-          // No token, redirect to error
-          window.location.href = 'http://localhost:5173/payment-error?errorCode=UNAUTHORIZED&errorMessage=Missing access token'
-          return
-        }
-        next()
-      }
     }
   ]
 })

@@ -69,19 +69,21 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+import { useAuthStore } from '@/stores/auth'
 
+const auth = useAuthStore()
 const route = useRoute()
-const router = useRouter()
 
 const payment = ref(null)
 const loading = ref(false)
 const error = ref(null)
 const selecting = ref(false)
-let isRedirectingToBank = false
 
 const loadPaymentDetails = async () => {
   loading.value = true
   error.value = null
+
+  auth.logout()
 
   try {
     const token = route.query.token
@@ -132,7 +134,6 @@ const selectPaymentMethod = async (paymentMethodId) => {
     
     // Step 3: Redirect to bank payment form
     if (bankResponse.data.paymentUrl) {
-      isRedirectingToBank = true
       debugger
       window.location.href = bankResponse.data.paymentUrl
     } else {
@@ -147,7 +148,30 @@ const selectPaymentMethod = async (paymentMethodId) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // Check if returning from bank with payment status
+  const status = route.query.status
+  const bankPaymentId = route.query.bankPaymentId
+  
+  if (status && bankPaymentId) {
+    // User is returning from bank, notify PSP backend and redirect to WebShop
+    try {
+      const response = await axios.get(`http://localhost:5002/api/payments/${route.params.id}/bank-callback`, {
+        params: { status, paymentId: bankPaymentId }
+      })
+      
+      // Backend returns redirect URL to WebShop
+      if (response.data && response.data.redirectUrl) {
+        window.location.href = response.data.redirectUrl
+        return
+      }
+    } catch (err) {
+      console.error('Failed to process bank callback:', err)
+      error.value = 'Failed to process payment result'
+    }
+  }
+  
+  // Normal payment page load
   loadPaymentDetails()
 })
 </script>
