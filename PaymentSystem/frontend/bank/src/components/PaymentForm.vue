@@ -1,6 +1,13 @@
 <template>
   <div class="payment-form">
     <h2>Payment</h2>
+    <!-- Logo-i kartica -->
+<div class="card-logos">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/Visa.svg" alt="Visa" class="card-logo">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" class="card-logo">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/American_Express_logo_%282018%29.svg" alt="American Express" class="card-logo">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="PayPal" class="card-logo">
+</div>
     
     <!-- Loading state -->
     <div v-if="loading" class="loading">
@@ -156,3 +163,208 @@ export default {
   }
 };
 </script>
+<style scoped>
+.payment-form {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 30px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+/* Logo-i kartica na vrhu */
+.card-logos {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.card-logo {
+  height: 40px;
+  width: auto;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+  filter: grayscale(30%);
+}
+
+.card-logo:hover {
+  opacity: 1;
+  filter: grayscale(0%);
+}
+
+.payment-form h2 {
+  text-align: center;
+  color: #2d3748;
+  margin-bottom: 25px;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.payment-form h3 {
+  color: #4a5568;
+  margin: 25px 0 15px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.payment-info {
+  background: #f8fafc;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 25px;
+  border-left: 4px solid #4299e1;
+}
+
+.payment-info p {
+  margin: 10px 0;
+  color: #4a5568;
+  font-size: 15px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.payment-info p strong {
+  color: #2d3748;
+  font-weight: 600;
+}
+
+/* Form styles */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #4a5568;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  background: white;
+  color: #2d3748;
+  box-sizing: border-box;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #4299e1;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+}
+
+.form-group input::placeholder {
+  color: #a0aec0;
+}
+
+.form-row {
+  display: flex;
+  gap: 20px;
+}
+
+.form-row .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+button {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 25px;
+  letter-spacing: 0.5px;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 20px rgba(102, 126, 234, 0.4);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #a0aec0;
+}
+
+.qr-payment {
+  text-align: center;
+  padding: 30px;
+  background: #f0f9ff;
+  border-radius: 12px;
+  margin-top: 20px;
+  border: 2px dashed #90cdf4;
+}
+
+.qr-payment h3 {
+  color: #2b6cb0;
+  margin-top: 0;
+}
+
+.qr-payment p {
+  color: #4a5568;
+  margin-bottom: 20px;
+}
+
+.loading, .error {
+  text-align: center;
+  padding: 40px 20px;
+  border-radius: 12px;
+  margin: 20px 0;
+}
+
+.loading {
+  background: #f7fafc;
+  color: #4a5568;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.loading::after {
+  content: '';
+  width: 20px;
+  height: 20px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #4299e1;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.error {
+  background: #fed7d7;
+  color: #c53030;
+  border: 2px solid #fc8181;
+  font-weight: 500;
+}
+
+
+
+.payment-form > * {
+  animation: fadeIn 0.5s ease forwards;
+}
+</style>

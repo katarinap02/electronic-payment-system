@@ -20,7 +20,7 @@ namespace Bank.API.Repositories
                 .Include(a => a.Customer)
                 .FirstOrDefault(a => a.AccountNumber == accountNumber);
         }
-        public bool ReserveFunds(long accountId, decimal amount)
+        public bool ReserveFunds(long accountId, decimal amount, string currency)
         {
             using var transaction = _context.Database.BeginTransaction(IsolationLevel.Serializable);
 
@@ -28,12 +28,24 @@ namespace Bank.API.Repositories
             {
                 var account = _context.BankAccounts
                     .FirstOrDefault(a => a.Id == accountId);
+                decimal amountInEur = amount;
+                if (currency.ToUpper() == "USD")
+                {
+                    // Fiksni kurs
+                    decimal usdToEurRate = 0.85m; // Možeš da izvučeš iz konfiguracije
+                    amountInEur = amount * usdToEurRate;
+                }
+                // Dodaj i druge valute ako treba
+                else if (currency.ToUpper() != "EUR")
+                {
+                    throw new InvalidOperationException($"Unsupported currency: {currency}");
+                }
 
-                if (account == null || account.AvailableBalance < amount)
+                if (account == null || account.AvailableBalance < amountInEur)
                     return false;
 
-                account.AvailableBalance -= amount;
-                account.ReservedBalance += amount;
+                account.AvailableBalance -= amountInEur;
+                account.ReservedBalance += amountInEur;
 
                 _context.SaveChanges();
                 transaction.Commit();
@@ -112,7 +124,7 @@ namespace Bank.API.Repositories
         }
 
         //ovo je za rollback
-        public bool ReleaseReservedFunds(long accountId, decimal amount)
+        public bool ReleaseReservedFunds(long accountId, decimal amount, string currency)
         {
             using var transaction = _context.Database.BeginTransaction(IsolationLevel.Serializable);
 
@@ -124,8 +136,18 @@ namespace Bank.API.Repositories
                 if (account == null || account.ReservedBalance < amount)
                     return false;
 
-                account.ReservedBalance -= amount;
-                account.AvailableBalance += amount;
+                decimal amountInEur = amount;
+
+                // Konvertuj USD u EUR ako je potrebno
+                if (currency.ToUpper() == "USD")
+                {
+                    decimal usdToEurRate = 0.85m;
+                    amountInEur = amount * usdToEurRate;
+                }
+
+                // Oslobodi rezervisana sredstva
+                account.AvailableBalance += amountInEur;
+                account.ReservedBalance -= amountInEur;
 
                 _context.SaveChanges();
                 transaction.Commit();

@@ -163,8 +163,8 @@ namespace Bank.API.Services
                     throw new ArgumentException("Invalid payment ID");
 
                 // Proverava da li je expired i da li je status Pending
-               // if (!_transactionRepo.IsTransactionValid(transaction.Id))
-               //     throw new InvalidOperationException("Transaction has expired");
+                if (!_transactionRepo.IsTransactionValid(transaction.Id))
+                    throw new InvalidOperationException("Transaction has expired");
 
                 // Validacija kartice, dodati posle proveru da se iznost nije promenio
                 if (!ValidateCardInformation(cardInfo, transaction))
@@ -187,6 +187,16 @@ namespace Bank.API.Services
                 if (card == null)
                     throw new InvalidOperationException("Card not found");
 
+                if (!ValidateCardholderName(cardInfo.CardholderName, card.CardholderName))
+                {
+                    throw new InvalidOperationException("Cardholder name does not match");
+                }
+
+                if (!ValidateExpiryDate(expiryParts[0], expiryParts[1], card.ExpiryMonth, card.ExpiryYear))
+                {
+                    throw new InvalidOperationException("Card expiry date does not match");
+                }
+
                 cardInfo.Cvv = null;
 
                 //Tokenizacija kartice (PCI DSS compliance)
@@ -205,7 +215,7 @@ namespace Bank.API.Services
                     card.CustomerId);
 
                 // Rezervacija sredstava 
-                if (!_accountRepo.ReserveFunds(customerAccount.Id, transaction.Amount))
+                if (!_accountRepo.ReserveFunds(customerAccount.Id, transaction.Amount, transaction.Currency))
                     throw new InvalidOperationException("Insufficient funds");
 
                 // Autorizacija transakcije
@@ -311,7 +321,7 @@ namespace Bank.API.Services
                 if (transaction.Status == PaymentTransaction.TransactionStatus.AUTHORIZED &&
                     transaction.CustomerAccountId.HasValue)
                 {
-                    _accountRepo.ReleaseReservedFunds(transaction.CustomerAccountId.Value, transaction.Amount);
+                    _accountRepo.ReleaseReservedFunds(transaction.CustomerAccountId.Value, transaction.Amount, transaction.Currency);
                 }
 
                 // Ažuriraj status na CANCELLED
@@ -363,6 +373,8 @@ namespace Bank.API.Services
             // Provera CVV formata
             if (string.IsNullOrEmpty(cardInfo.Cvv) || cardInfo.Cvv.Length < 3 || cardInfo.Cvv.Length > 4)
                 return false;
+            if (!ValidateCardWithCvv(cardInfo.CardNumber, cardInfo.Cvv))
+                return false;
 
             // Provera cardholder name
             if (string.IsNullOrEmpty(cardInfo.CardholderName) || cardInfo.CardholderName.Length < 2)
@@ -370,6 +382,34 @@ namespace Bank.API.Services
 
             return true;
         }
+
+            public bool ValidateCardWithCvv(string cardNumber, string cvv)
+            {
+
+                // 2. U realnom sistemu - poziv ka Visa/Mastercard mreži
+                //    ili internom sistemu banke
+                //var response = _cardNetworkApi.ValidateCvv(cardNumber, cvv);
+
+                // 3. Za demo - test kartice
+                return IsTestCardCvvValid(cardNumber, cvv);
+            }
+
+            private bool IsTestCardCvvValid(string cardNumber, string cvv)
+            {
+                var cleanNumber = cardNumber.Replace(" ", "");
+
+                // Test Visa/Mastercard: CVV = 123
+                if ((cleanNumber.StartsWith("4") || cleanNumber.StartsWith("5"))
+                    && cvv == "123")
+                    return true;
+
+                // Test Amex: CVV = 1234
+                if (cleanNumber.StartsWith("34") || cleanNumber.StartsWith("37"))
+                    return cvv == "1234";
+
+                return false;
+            }
+        
 
         private string GenerateGlobalTransactionId()
         {
@@ -379,6 +419,52 @@ namespace Bank.API.Services
             var uniqueId = Guid.NewGuid().ToString("N").Substring(0, 12).ToUpper();
 
             return $"{bankPrefix}{timestamp}{uniqueId}";
+        }
+
+        private bool ValidateCardholderName(string enteredName, string storedName)
+        {
+            if (string.IsNullOrWhiteSpace(enteredName) || string.IsNullOrWhiteSpace(storedName))
+                return false;
+
+            // Ukloni višak razmaka i konvertuj u uppercase 
+            var entered = enteredName.Trim().ToUpperInvariant();
+            var stored = storedName.Trim().ToUpperInvariant();
+
+            return entered == stored;
+        }
+
+        private bool ValidateExpiryDate(string enteredMonth, string enteredYear, string storedMonth, string storedYear)
+        {
+            try
+            {
+                enteredMonth = enteredMonth.Trim().PadLeft(2, '0');
+                enteredYear = enteredYear.Trim();
+
+                // Proveri format (MM i YY kao stringovi)
+                if (enteredMonth.Length != 2 || enteredYear.Length != 2)
+                    return false;
+
+                if (storedMonth.Length != 2 || storedYear.Length != 2)
+                    return false;
+
+                // Proveri da li su brojevi
+                if (!int.TryParse(enteredMonth, out int enteredMonthInt) ||
+                    !int.TryParse(enteredYear, out int enteredYearInt) ||
+                    !int.TryParse(storedMonth, out int storedMonthInt) ||
+                    !int.TryParse(storedYear, out int storedYearInt))
+                    return false;
+
+                if (enteredMonthInt < 1 || enteredMonthInt > 12)
+                    return false;
+
+
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
     }

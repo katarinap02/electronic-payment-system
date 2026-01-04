@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <h1>Bank Payment System</h1>
+    <h1 class="centered-title">Bank Payment System</h1>
     <router-view></router-view>
   </div>
 </template>
@@ -10,3 +10,10 @@ export default {
   name: 'App'
 }
 </script>
+
+<style scoped>
+.centered-title {
+  text-align: center;
+  margin: 20px 0;
+}
+</style>
