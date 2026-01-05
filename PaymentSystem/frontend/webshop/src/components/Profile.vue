@@ -1,6 +1,6 @@
 <template>
   <div class="profile-container">
-    <h2 class="profile-title">Moj Profil</h2>
+    <h2 class="profile-title">My Profile</h2>
     
     <div v-if="authStore.isAuthenticated && authStore.user" class="profile-card">
       <div class="profile-header">
@@ -44,18 +44,18 @@
 
       <div class="profile-actions">
         <button @click="goToDashboard" class="btn btn-primary">
-          Nazad na Dashboard
+          Back to Dashboard
         </button>
         <button @click="handleLogout" class="btn btn-danger">
-          Odjavi se
+          Logout
         </button>
       </div>
     </div>
 
     <div v-else class="error-message">
-      <p>Niste ulogovani. Molimo prijavite se.</p>
+      <p>You are not logged in. Please login.</p>
       <button @click="goToLogin" class="btn btn-primary">
-        Prijavi se
+        Login
       </button>
     </div>
   </div>
