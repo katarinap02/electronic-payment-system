@@ -1,6 +1,7 @@
 ﻿using Bank.API.Data;
 using Bank.API.Models;
 using Microsoft.EntityFrameworkCore;
+using static Bank.API.Models.PaymentTransaction;
 
 namespace Bank.API.Repositories
 {
@@ -219,5 +220,17 @@ namespace Bank.API.Repositories
             _context.SaveChanges();
             return true;
         }
-    }
-}
+
+        // U PaymentTransactionRepository dodaj
+        public IEnumerable<PaymentTransaction> GetAuthorizedTransactionsOlderThan(TimeSpan age)
+        {
+            var cutoffTime = DateTime.UtcNow.AddHours(-1) - age;
+    
+            return _context.PaymentTransactions
+                .Where(t => t.Status == TransactionStatus.AUTHORIZED &&
+                           t.AuthorizedAt < cutoffTime)
+                .ToList();
+        }
+       
+            }
+        }

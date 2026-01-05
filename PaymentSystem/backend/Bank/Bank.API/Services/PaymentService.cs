@@ -314,20 +314,27 @@ namespace Bank.API.Services
             try
             {
                 var transaction = _transactionRepo.GetByPaymentId(paymentId);
-                if (transaction == null || transaction.Status != PaymentTransaction.TransactionStatus.PENDING)
+
+                if (transaction == null ||
+                    (transaction.Status != PaymentTransaction.TransactionStatus.PENDING &&
+                     transaction.Status != PaymentTransaction.TransactionStatus.AUTHORIZED))
                     return false;
 
-                // Ako su sredstva već rezervisana, oslobodi ih
+                // AKO JE AUTHORIZED - OSLOBODI REZERVISANA SREDSTVA
                 if (transaction.Status == PaymentTransaction.TransactionStatus.AUTHORIZED &&
                     transaction.CustomerAccountId.HasValue)
                 {
-                    _accountRepo.ReleaseReservedFunds(transaction.CustomerAccountId.Value, transaction.Amount, transaction.Currency);
+                    _accountRepo.ReleaseReservedFunds(
+                        transaction.CustomerAccountId.Value,
+                        transaction.Amount,
+                        transaction.Currency);
+
+                    _logger.LogInformation($"Released reserved funds for cancelled payment: {paymentId}");
                 }
 
-                // Ažuriraj status na CANCELLED
                 _transactionRepo.UpdateStatus(transaction.Id, PaymentTransaction.TransactionStatus.CANCELLED);
 
-                _logger.LogInformation($"Payment cancelled: {paymentId}");
+                _logger.LogInformation($"Payment cancelled: {paymentId}, Previous status: {transaction.Status}");
 
                 return true;
             }

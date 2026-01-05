@@ -15,6 +15,7 @@ builder.Services.AddScoped<CustomerRepository>();
 builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<CardService>();
 builder.Services.AddScoped<SeedDataService>();
+builder.Services.AddHostedService<AutoCaptureBackgroundService>();
 
 // Add services to the container.
 builder.Services.AddControllers()

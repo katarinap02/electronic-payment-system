@@ -1,5 +1,6 @@
 ﻿using Bank.API.Data;
 using Bank.API.Models;
+using Bank.API.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 
@@ -8,10 +9,13 @@ namespace Bank.API.Repositories
     public class BankAccountRepository
     {
         private readonly AppDbContext _context;
+        private readonly ILogger<AutoCaptureBackgroundService> _logger;
 
-        public BankAccountRepository(AppDbContext context)
+        public BankAccountRepository(AppDbContext context,
+        ILogger<AutoCaptureBackgroundService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public BankAccount? GetByAccountNumber(string accountNumber)
@@ -67,57 +71,48 @@ namespace Bank.API.Repositories
             return account != null && account.AvailableBalance >= amount;
         }
 
-        public bool CaptureReservedFunds(long accountId, decimal amount)
+        // U BankAccountRepository proveri FinalizeCapture
+        public bool FinalizeCapture(long customerAccountId, long merchantAccountId,
+            decimal amount, string currency = "EUR")
         {
+
             using var transaction = _context.Database.BeginTransaction(IsolationLevel.Serializable);
 
             try
             {
-                var account = _context.BankAccounts
-                    .FirstOrDefault(a => a.Id == accountId);
+                var customer = _context.BankAccounts.Find(customerAccountId);
+                var merchant = _context.BankAccounts.Find(merchantAccountId);
 
-                if (account == null || account.ReservedBalance < amount)
+                if (customer == null || merchant == null)
+                {
+                    _logger.LogWarning($"❌ Accounts not found. Customer: {customerAccountId}, Merchant: {merchantAccountId}");
                     return false;
+                }
 
-                account.ReservedBalance -= amount;
-                account.PendingCaptureBalance += amount;
+                decimal amountInEur = currency.ToUpper() == "USD" ? amount * 0.85m : amount;
+
+                // Proveri da li kupac ima dovoljno rezervisanih sredstava
+                if (customer.ReservedBalance < amountInEur)
+                {
+                    _logger.LogWarning($"❌ Insufficient reserved balance. " +
+                                      $"Customer {customerAccountId} has {customer.ReservedBalance}, needs {amountInEur}");
+                    return false;
+                }
+
+                // 👉 TRANSFER: Reserved → Merchant
+                customer.ReservedBalance -= amountInEur;
+                customer.Balance -= amountInEur;
+                merchant.AvailableBalance += amountInEur;
+                merchant.Balance += amountInEur;
 
                 _context.SaveChanges();
                 transaction.Commit();
+
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
-                transaction.Rollback();
-                throw;
-            }
-        }
-
-        public bool FinalizeCapture(long merchantAccountId, long customerAccountId, decimal amount)
-        {
-            using var transaction = _context.Database.BeginTransaction(IsolationLevel.Serializable);
-
-            try
-            {
-                var merchantAccount = _context.BankAccounts
-                    .FirstOrDefault(a => a.Id == merchantAccountId && a.IsMerchantAccount);
-
-                var customerAccount = _context.BankAccounts
-                    .FirstOrDefault(a => a.Id == customerAccountId);
-
-                if (merchantAccount == null || customerAccount == null ||
-                    customerAccount.PendingCaptureBalance < amount)
-                    return false;
-
-                customerAccount.PendingCaptureBalance -= amount;
-                merchantAccount.Balance += amount;
-
-                _context.SaveChanges();
-                transaction.Commit();
-                return true;
-            }
-            catch
-            {
+                _logger.LogError(ex, $"🔥 Error in FinalizeCapture");
                 transaction.Rollback();
                 throw;
             }
