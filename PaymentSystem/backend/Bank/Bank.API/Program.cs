@@ -1,4 +1,5 @@
 using Bank.API.Data;
+using Bank.API.Middleware;
 using Bank.API.Repositories;
 using Bank.API.Services;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +17,8 @@ builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<CardService>();
 builder.Services.AddScoped<SeedDataService>();
 builder.Services.AddHostedService<AutoCaptureBackgroundService>();
+
+
 
 // Add services to the container.
 builder.Services.AddControllers()
@@ -70,6 +73,8 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine($"Error seeding test data: {ex.Message}");
     }
 }
+
+app.UseMiddleware<HmacValidationMiddleware>();
 
 app.UseRouting();
 app.UseCors("AllowFrontend");

@@ -47,7 +47,7 @@ namespace Bank.API.Repositories
                 MerchantTimestamp = merchantTimestamp,
                 MerchantAccountId = merchantAccountId,
                 PspTimestamp = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(45),
+                ExpiresAt = DateTime.UtcNow.AddMinutes(30),
                 CustomerId = customerId,
                 SuccessUrl = successUrl,
                 FailedUrl = failedUrl,

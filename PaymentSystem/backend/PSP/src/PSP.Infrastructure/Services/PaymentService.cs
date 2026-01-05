@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using PSP.Application.DTOs.Payments;
 using PSP.Application.Interfaces.Repositories;
 using PSP.Domain.Entities;
@@ -13,19 +14,22 @@ public class PaymentService
     private readonly IPaymentMethodRepository _paymentMethodRepository;
     private readonly IConfiguration _configuration;
     private readonly HttpClient _httpClient;
+    private readonly ILogger<PaymentService> _logger;
 
     public PaymentService(
         IPaymentRepository paymentRepository,
         IWebShopRepository webShopRepository,
         IPaymentMethodRepository paymentMethodRepository,
         IConfiguration configuration,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        ILogger<PaymentService> logger)
     {
         _paymentRepository = paymentRepository;
         _webShopRepository = webShopRepository;
         _paymentMethodRepository = paymentMethodRepository;
         _configuration = configuration;
         _httpClient = httpClient;
+        _logger = logger;
     }
 
     public async Task<PaymentInitializationResponse> InitializePaymentAsync(PaymentInitializationRequest request)
@@ -130,18 +134,122 @@ public class PaymentService
         // Prepare data for frontend to call Bank API
         var stan = $"PSP-{payment.Id}-{DateTime.UtcNow.Ticks}";
         var pspBackendUrl = _configuration["PSPBackendUrl"] ?? "http://localhost:5002";
-        
-        return new PaymentMethodSelectionResponse
+
+        //BACK POZIVA BACK ZBOG SIGURNIH KLJUCEVA
+
+
+        try
         {
-            MerchantId = webShop.MerchantId,
-            Amount = payment.Amount,
-            Currency = payment.Currency.ToString(),
-            Stan = stan,
-            PspTimestamp = DateTime.UtcNow,
-            SuccessUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=success",
-            FailedUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=failed",
-            ErrorUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=error"
-        };
+            // Pripremi podatke za banku
+            var bankRequestData = new
+            {
+                MerchantId = webShop.MerchantId,
+                Amount = payment.Amount,
+                Currency = payment.Currency.ToString(),
+                Stan = stan,
+                PspTimestamp = DateTime.UtcNow,
+                SuccessUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=success",
+                FailedUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=failed",
+                ErrorUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=error"
+            };
+
+            // Pozovi banku sa HMAC-om
+            var bankResponse = await CallBankWithHmacAsync(bankRequestData);
+
+            // Sa?uvaj bank podatke
+            payment.PaymentUrl = bankResponse.PaymentUrl;
+            await _paymentRepository.UpdateAsync(payment);
+
+            // Vrati bank payment_url frontendu
+            return new PaymentMethodSelectionResponse
+            {
+                MerchantId = webShop.MerchantId,
+                Amount = payment.Amount,
+                Currency = payment.Currency.ToString(),
+                Stan = stan,
+                PspTimestamp = DateTime.UtcNow,
+                SuccessUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=success",
+                FailedUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=failed",
+                ErrorUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=error",
+
+                BankPaymentId = bankResponse.PaymentId,
+                BankPaymentUrl = bankResponse.PaymentUrl  // OVO FRONTEND KORISTI!
+            };
+        }
+        catch (Exception ex)
+        {
+            // Rollback ako banka odbije
+            payment.Status = PaymentStatus.Failed;
+            await _paymentRepository.UpdateAsync(payment);
+            throw new InvalidOperationException($"Failed to initiate payment with bank: {ex.Message}");
+        }
+    }
+
+    private async Task<BankPaymentResponse> CallBankWithHmacAsync(object requestData)
+    {
+        try
+        {
+            var bankConfig = _configuration.GetSection("BankSettings:TestBank");
+            var baseUrl = bankConfig["BaseUrl"] ?? "http://localhost:5001";
+            var merchantId = bankConfig["MerchantId"];
+            var secretKey = bankConfig["SecretKey"];
+
+            var requestBody = System.Text.Json.JsonSerializer.Serialize(requestData);
+            var timestamp = DateTime.UtcNow.ToString("o");
+
+            // Generiši HMAC
+            var signature = Utilities.HmacHelper.GenerateSignature(merchantId, timestamp, requestBody, secretKey);
+
+            // Pošalji zahtev banci
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/payment/initiate")
+            {
+                Content = new StringContent(requestBody, System.Text.Encoding.UTF8, "application/json")
+            };
+
+            httpRequest.Headers.Add("X-Merchant-ID", merchantId);
+            httpRequest.Headers.Add("X-Timestamp", timestamp);
+            httpRequest.Headers.Add("X-Signature", signature);
+            httpRequest.Headers.Add("X-Request-ID", Guid.NewGuid().ToString());
+
+            var response = await _httpClient.SendAsync(httpRequest);
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new HttpRequestException($"Bank API returned {response.StatusCode}");
+            }
+
+            // Deserijalizuj sa case-insensitive opcijama
+            var options = new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+            };
+
+            var bankResponse = System.Text.Json.JsonSerializer.Deserialize<BankPaymentResponse>(responseContent, options);
+
+            if (bankResponse == null)
+            {
+                throw new InvalidOperationException("Bank response deserialization failed");
+            }
+
+            return bankResponse;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, " Error calling bank API");
+            throw;
+        }
+    }
+
+    // DODAJ OVU KLASU
+    public class BankPaymentResponse
+    {
+        public string PaymentId { get; set; }
+        public string PaymentUrl { get; set; }
+        public DateTime ExpiresAt { get; set; }
+        public string Message { get; set; }
     }
 
     public class PaymentMethodSelectionResponse
@@ -154,6 +262,8 @@ public class PaymentService
         public string SuccessUrl { get; set; } = string.Empty;
         public string FailedUrl { get; set; } = string.Empty;
         public string ErrorUrl { get; set; } = string.Empty;
+        public string BankPaymentId { get; set; } = string.Empty;
+        public string BankPaymentUrl { get; set; } = string.Empty;
     }
 
     public async Task CancelPaymentAsync(int paymentId)

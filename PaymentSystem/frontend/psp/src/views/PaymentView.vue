@@ -114,28 +114,28 @@ const selectPaymentMethod = async (paymentMethodId) => {
     
     console.log('PSP Response:', pspResponse.data)
     
-    // Step 2: Call Bank API directly to get payment form URL
-    const bankRequest = {
-      merchantId: pspResponse.data.merchantId,
-      amount: pspResponse.data.amount,
-      currency: pspResponse.data.currency,
-      stan: pspResponse.data.stan,
-      pspTimestamp: pspResponse.data.pspTimestamp,
-      successUrl: pspResponse.data.successUrl,
-      failedUrl: pspResponse.data.failedUrl,
-      errorUrl: pspResponse.data.errorUrl
-    }
+    // // Step 2: Call Bank API directly to get payment form URL
+    // const bankRequest = {
+    //   merchantId: pspResponse.data.merchantId,
+    //   amount: pspResponse.data.amount,
+    //   currency: pspResponse.data.currency,
+    //   stan: pspResponse.data.stan,
+    //   pspTimestamp: pspResponse.data.pspTimestamp,
+    //   successUrl: pspResponse.data.successUrl,
+    //   failedUrl: pspResponse.data.failedUrl,
+    //   errorUrl: pspResponse.data.errorUrl
+    // }
     
-    console.log('Bank Request:', bankRequest)
+    // console.log('Bank Request:', bankRequest)
     
-    const bankResponse = await axios.post('http://localhost:5001/api/payment/initiate', bankRequest)
+    // const bankResponse = await axios.post('http://localhost:5001/api/payment/initiate', bankRequest)
     
-    console.log('Bank Response:', bankResponse.data)
+    // console.log('Bank Response:', bankResponse.data)
     
     // Step 3: Redirect to bank payment form
-    if (bankResponse.data.paymentUrl) {
+    if (pspResponse.data.bankPaymentUrl) {
       debugger
-      window.location.href = bankResponse.data.paymentUrl
+      window.location.href = pspResponse.data.bankPaymentUrl
     } else {
       throw new Error('Bank payment URL not received')
     }
