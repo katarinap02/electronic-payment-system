@@ -10,5 +10,6 @@
         public string SuccessUrl { get; set; }
         public string FailedUrl { get; set; }
         public string ErrorUrl { get; set; }
+        public string? PaymentMethodCode { get; set; } // CREDIT_CARD ili IPS_SCAN
     }
 }

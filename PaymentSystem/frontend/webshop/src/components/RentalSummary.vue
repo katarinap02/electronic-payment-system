@@ -6,7 +6,7 @@
     <div class="summary-container">
       <!-- Vehicle Information -->
       <div class="summary-section">
-        <h4 class="section-heading">🚗 Vehicle</h4>
+        <h4 class="section-heading">Vehicle</h4>
         <div class="info-card">
           <div class="vehicle-header">
             <img 
@@ -30,7 +30,7 @@
 
       <!-- Rental Period -->
       <div class="summary-section">
-        <h4 class="section-heading">📅 Rental Period</h4>
+        <h4 class="section-heading">Rental Period</h4>
         <div class="info-card">
           <div class="date-range">
             <div class="date-item">
@@ -51,7 +51,7 @@
 
       <!-- Insurance Package -->
       <div class="summary-section">
-        <h4 class="section-heading">🛡️ Insurance</h4>
+        <h4 class="section-heading">Insurance</h4>
         <div class="info-card">
           <div v-if="rentalData.insurance" class="insurance-details">
             <div class="insurance-header">
@@ -83,7 +83,7 @@
 
       <!-- Additional Services -->
       <div class="summary-section">
-        <h4 class="section-heading">✨ Additional Services</h4>
+        <h4 class="section-heading"> Additional Services</h4>
         <div class="info-card">
           <div v-if="rentalData.services && rentalData.services.length > 0" class="services-list">
             <div 
@@ -136,7 +136,7 @@
       <!-- Currency Selection -->
       <div class="summary-section">
         <div class="currency-card">
-          <h4 class="section-heading">💰 Payment Currency</h4>
+          <h4 class="section-heading">Payment Currency</h4>
           <div class="currency-options">
             <label class="currency-option" :class="{ selected: selectedCurrency === 0 }">
               <input type="radio" name="currency" :value="0" v-model="selectedCurrency" />
@@ -166,6 +166,7 @@
 import { ref, computed } from 'vue';
 
 const selectedCurrency = ref(0); // Default EUR
+const USD_TO_EUR_RATE = 1.15; // 1 USD = 0.85 EUR (or 1 EUR = 1.176 USD)
 
 const props = defineProps({
   vehicle: {
@@ -180,23 +181,34 @@ const props = defineProps({
 
 const emit = defineEmits(['confirm', 'back']);
 
+// Helper function to apply currency conversion
+const applyConversion = (amount) => {
+  if (selectedCurrency.value === 1) { // USD
+    return amount * USD_TO_EUR_RATE;
+  }
+  return amount; // EUR - no conversion
+};
+
 const vehicleTotal = computed(() => {
-  return props.vehicle.pricePerDay * props.rentalData.days;
+  const baseTotal = props.vehicle.pricePerDay * props.rentalData.days;
+  return applyConversion(baseTotal);
 });
 
 const insuranceTotal = computed(() => {
-  return props.rentalData.insurance 
+  const baseTotal = props.rentalData.insurance 
     ? props.rentalData.insurance.pricePerDay * props.rentalData.days 
     : 0;
+  return applyConversion(baseTotal);
 });
 
 const servicesTotal = computed(() => {
   if (!props.rentalData.services || props.rentalData.services.length === 0) {
     return 0;
   }
-  return props.rentalData.services.reduce((total, service) => {
+  const baseTotal = props.rentalData.services.reduce((total, service) => {
     return total + (service.pricePerDay * props.rentalData.days);
   }, 0);
+  return applyConversion(baseTotal);
 });
 
 const grandTotal = computed(() => {

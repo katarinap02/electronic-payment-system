@@ -47,6 +47,7 @@ onMounted(() => {
         <div class="navbar-links">
           <router-link to="/vehicles" class="nav-link">Vehicles</router-link>
           <router-link v-if="authStore.isAuthenticated" to="/dashboard" class="nav-link">Dashboard</router-link>
+          <router-link v-if="authStore.isAuthenticated" to="/rentals" class="nav-link">Moje Rezervacije</router-link>
           <router-link v-if="authStore.isAuthenticated" to="/profile" class="nav-link">Profil</router-link>
           <router-link v-if="isAdmin" to="/admin/vehicles" class="nav-link">Admin</router-link>
         </div>

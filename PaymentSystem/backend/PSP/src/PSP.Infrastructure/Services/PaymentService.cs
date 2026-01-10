@@ -148,6 +148,7 @@ public class PaymentService
                 Currency = payment.Currency.ToString(),
                 Stan = stan,
                 PspTimestamp = DateTime.UtcNow,
+                PaymentMethodCode = paymentMethod.Code, // CREDIT_CARD ili IPS_SCAN
                 SuccessUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=success",
                 FailedUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=failed",
                 ErrorUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=error"
@@ -197,10 +198,10 @@ public class PaymentService
             var requestBody = System.Text.Json.JsonSerializer.Serialize(requestData);
             var timestamp = DateTime.UtcNow.ToString("o");
 
-            // Generiši HMAC
+            // Generiï¿½i HMAC
             var signature = Utilities.HmacHelper.GenerateSignature(merchantId, timestamp, requestBody, secretKey);
 
-            // Pošalji zahtev banci
+            // Poï¿½alji zahtev banci
             var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/payment/initiate")
             {
                 Content = new StringContent(requestBody, System.Text.Encoding.UTF8, "application/json")
@@ -315,12 +316,29 @@ public class PaymentService
 
         await _paymentRepository.UpdateAsync(payment);
 
+        // Get payment method name if available
+        string paymentMethodCode = "UNKNOWN";
+        if (payment.PaymentMethodId.HasValue)
+        {
+            var paymentMethod = await _paymentMethodRepository.GetByIdAsync(payment.PaymentMethodId.Value);
+            if (paymentMethod != null)
+            {
+                // Map payment method code to frontend format
+                paymentMethodCode = paymentMethod.Code switch
+                {
+                    "CREDIT_CARD" => "CreditCard",
+                    "IPS_SCAN" => "QR_CODE",
+                    _ => paymentMethod.Code
+                };
+            }
+        }
+
         // Redirect to WebShop based on status
         string redirectUrl;
         switch (status.ToLower())
         {
             case "success":
-                redirectUrl = $"{webShop.SuccessUrl}?paymentId={paymentId}&orderId={payment.MerchantOrderId}&amount={payment.Amount}&currency={payment.Currency}";
+                redirectUrl = $"{webShop.SuccessUrl}?paymentId={paymentId}&orderId={payment.MerchantOrderId}&amount={payment.Amount}&currency={payment.Currency}&paymentMethod={paymentMethodCode}";
                 break;
             case "failed":
                 redirectUrl = $"{webShop.FailedUrl}?paymentId={paymentId}&orderId={payment.MerchantOrderId}";
@@ -335,3 +353,4 @@ public class PaymentService
         return redirectUrl;
     }
 }
+

@@ -25,7 +25,8 @@ namespace Bank.API.Repositories
             string? customerId = null,
             string? successUrl = null,
             string? failedUrl = null,
-            string? errorUrl = null
+            string? errorUrl = null,
+            string? paymentMethodCode = null
             )
         {
             var merchantAccount = _context.BankAccounts
@@ -51,7 +52,8 @@ namespace Bank.API.Repositories
                 CustomerId = customerId,
                 SuccessUrl = successUrl,
                 FailedUrl = failedUrl,
-                ErrorUrl = errorUrl
+                ErrorUrl = errorUrl,
+                PaymentMethodCode = paymentMethodCode
             };
 
             _context.PaymentTransactions.Add(transaction);
@@ -232,5 +234,10 @@ namespace Bank.API.Repositories
                 .ToList();
         }
        
-            }
+        public void UpdateTransaction(PaymentTransaction transaction)
+        {
+            _context.PaymentTransactions.Update(transaction);
+            _context.SaveChanges();
         }
+    }
+}

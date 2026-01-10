@@ -169,5 +169,10 @@ namespace Bank.API.Repositories
                                    !a.IsMerchantAccount);
         }
 
+        public void UpdateAccount(BankAccount account)
+        {
+            _context.BankAccounts.Update(account);
+            _context.SaveChanges();
+        }
     }
 }

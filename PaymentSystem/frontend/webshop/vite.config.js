@@ -17,9 +17,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://webshop-api:80', //bez dokera staviti http://localhost:5000
+        target: 'http://webshop-api:80',
         changeOrigin: true, 
-        secure: false
+        secure: false,
       }
     }
   }

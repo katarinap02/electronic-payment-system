@@ -112,15 +112,38 @@
     <!-- Vehicles Grid -->
     <div v-else-if="vehicles.length > 0" class="vehicles-section">
       <div class="vehicles-info">
-        <p>Found {{ vehicles.length }} vehicle(s)</p>
+        <p>Found {{ vehicles.length }} vehicle(s) - Page {{ currentPage }} of {{ totalPages }}</p>
       </div>
       <div class="vehicles-grid">
         <VehicleCard
-          v-for="vehicle in vehicles"
+          v-for="vehicle in paginatedVehicles"
           :key="vehicle.id"
           :vehicle="vehicle"
           @view-details="viewVehicleDetails"
         />
+      </div>
+      
+      <!-- Pagination Controls -->
+      <div class="pagination" v-if="totalPages > 1">
+        <button class="btn-page" @click="prevPage" :disabled="currentPage === 1">
+          ← Previous
+        </button>
+        
+        <div class="page-numbers">
+          <button 
+            v-for="page in totalPages" 
+            :key="page"
+            class="btn-page-number" 
+            :class="{ active: page === currentPage }"
+            @click="goToPage(page)"
+          >
+            {{ page }}
+          </button>
+        </div>
+        
+        <button class="btn-page" @click="nextPage" :disabled="currentPage === totalPages">
+          Next →
+        </button>
       </div>
     </div>
 
@@ -144,6 +167,11 @@ const vehicles = ref([]);
 const loading = ref(false);
 const error = ref(null);
 
+// Pagination state
+const currentPage = ref(1);
+const pageSize = 5; // 5 vehicles per page
+const totalVehicles = ref(0);
+
 const filters = ref({
   category: null,
   transmission: null,
@@ -164,13 +192,46 @@ const hasActiveFilters = computed(() => {
   });
 });
 
+const paginatedVehicles = computed(() => {
+  const start = (currentPage.value - 1) * pageSize;
+  const end = start + pageSize;
+  return vehicles.value.slice(start, end);
+});
+
+const totalPages = computed(() => {
+  return Math.ceil(vehicles.value.length / pageSize);
+});
+
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+};
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+};
+
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+};
+
 const fetchVehicles = async () => {
   loading.value = true;
   error.value = null;
+  currentPage.value = 1; // Reset to first page
   
   try {
     const response = await vehicleApi.getAllVehicles();
     vehicles.value = response.data.data || response.data;
+    totalVehicles.value = vehicles.value.length;
   } catch (err) {
     console.error('Error fetching vehicles:', err);
     error.value = 'Failed to load vehicles. Please try again.';
@@ -182,29 +243,37 @@ const fetchVehicles = async () => {
 const applyFilters = async () => {
   loading.value = true;
   error.value = null;
+  currentPage.value = 1; // Reset to first page
 
   try {
     // Build search params - only include non-null/non-empty values
-    const searchParams = {};
+    const searchDto = {};
     
     Object.entries(filters.value).forEach(([key, value]) => {
       if (key === 'brand') {
         if (value && value.trim() !== '') {
-          searchParams[key] = value.trim();
+          searchDto[key] = value.trim();
         }
       } else if (value !== null && value !== '') {
-        searchParams[key] = value;
+        // Convert string numbers to actual numbers for enum fields
+        if (['category', 'transmission', 'fuelType', 'status'].includes(key)) {
+          searchDto[key] = parseInt(value, 10);
+        } else {
+          searchDto[key] = value;
+        }
       }
     });
 
     // If no filters are active, just get all vehicles
-    if (Object.keys(searchParams).length === 0) {
+    if (Object.keys(searchDto).length === 0) {
       await fetchVehicles();
       return;
     }
 
-    const response = await vehicleApi.searchVehicles(searchParams);
+    // Wrap in searchDto object as backend expects
+    const response = await vehicleApi.searchVehicles({ searchDto });
     vehicles.value = response.data.data || response.data;
+    totalVehicles.value = vehicles.value.length;
   } catch (err) {
     console.error('Error searching vehicles:', err);
     error.value = 'Failed to search vehicles. Please try again.';
@@ -447,6 +516,67 @@ onMounted(() => {
   font-size: 18px;
   color: #6b7280;
   margin-bottom: 20px;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-top: 40px;
+  padding: 20px;
+}
+
+.btn-page {
+  padding: 10px 20px;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-page:hover:not(:disabled) {
+  background: #4338ca;
+  transform: translateY(-2px);
+}
+
+.btn-page:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-page-number {
+  padding: 8px 14px;
+  background: white;
+  color: #4f46e5;
+  border: 2px solid #4f46e5;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  min-width: 40px;
+}
+
+.btn-page-number:hover {
+  background: #eef2ff;
+  transform: translateY(-2px);
+}
+
+.btn-page-number.active {
+  background: #4f46e5;
+  color: white;
 }
 
 /* Responsive Design */

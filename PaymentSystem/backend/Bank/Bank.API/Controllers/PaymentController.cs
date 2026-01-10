@@ -10,11 +10,16 @@ namespace Bank.API.Controllers
     public class PaymentController : ControllerBase
     {
         private readonly PaymentService _paymentService;
+        private readonly NbsQrCodeService _qrCodeService;
         private readonly ILogger<PaymentController> _logger;
 
-        public PaymentController(PaymentService paymentService, ILogger<PaymentController> logger)
+        public PaymentController(
+            PaymentService paymentService, 
+            NbsQrCodeService qrCodeService,
+            ILogger<PaymentController> logger)
         {
             _paymentService = paymentService;
+            _qrCodeService = qrCodeService;
             _logger = logger;
         }
         [HttpPost("initiate")]
@@ -157,6 +162,96 @@ namespace Bank.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error cancelling payment: {paymentId}");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
+        /// <summary>
+        /// Generiše NBS IPS QR kod za plaćanje
+        /// </summary>
+        [HttpPost("qr/generate/{paymentId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GenerateQrCode(string paymentId, [FromQuery] int size = 300)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(paymentId))
+                    return BadRequest(new { error = "Payment ID is required" });
+
+                var qrCodeData = await _paymentService.GenerateQrCodeForPaymentAsync(paymentId, size);
+                
+                if (!qrCodeData.Success)
+                    return BadRequest(new { error = qrCodeData.ErrorMessage });
+
+                return Ok(qrCodeData);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning($"Invalid payment ID for QR: {paymentId}, Error: {ex.Message}");
+                return NotFound(new { error = "Payment not found" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error generating QR code: {paymentId}");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
+        /// <summary>
+        /// Proverava status QR plaćanja (polling endpoint)
+        /// </summary>
+        [HttpGet("qr/status/{paymentId}")]
+        [AllowAnonymous]
+        public IActionResult GetQrPaymentStatus(string paymentId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(paymentId))
+                    return BadRequest(new { error = "Payment ID is required" });
+
+                var status = _paymentService.GetPaymentStatus(paymentId);
+                return Ok(status);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning($"Invalid payment ID for QR status: {paymentId}, Error: {ex.Message}");
+                return NotFound(new { error = "Payment not found" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting QR payment status: {paymentId}");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
+        /// <summary>
+        /// Simulira skeniranje QR koda i potvrđuje plaćanje
+        /// (U produkciji, ovo bi bilo poziv iz mBanking aplikacije)
+        /// </summary>
+        [HttpPost("qr/confirm/{paymentId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ConfirmQrPayment(string paymentId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(paymentId))
+                    return BadRequest(new { error = "Payment ID is required" });
+
+                var result = await _paymentService.ConfirmQrPayment(paymentId);
+                
+                if (!result.Success)
+                    return BadRequest(new { error = result.ErrorMessage });
+
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning($"Invalid payment ID for QR confirm: {paymentId}, Error: {ex.Message}");
+                return NotFound(new { error = "Payment not found" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error confirming QR payment: {paymentId}");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }

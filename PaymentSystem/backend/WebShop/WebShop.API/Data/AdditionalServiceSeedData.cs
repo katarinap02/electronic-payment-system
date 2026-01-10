@@ -17,7 +17,7 @@ namespace WebShop.API.Data
                     Description = "Modern Garmin GPS device with updated European maps, speed camera alerts, and traffic updates.",
                     PricePerDay = 5.00m,
                     IsAvailable = true,
-                    IconUrl = "https://example.com/icons/gps.svg"
+                    IconUrl = "https://m.media-amazon.com/images/I/71DoQ1vZYKL._AC_UF894,1000_QL80_.jpg"
                 },
                 new AdditionalService
                 {
@@ -25,7 +25,7 @@ namespace WebShop.API.Data
                     Description = "Safety-certified rear-facing child seat for infants and toddlers. Complies with EU standards.",
                     PricePerDay = 8.00m,
                     IsAvailable = true,
-                    IconUrl = "https://example.com/icons/child-seat.svg"
+                    IconUrl = "https://w7.pngwing.com/pngs/512/825/png-transparent-britax-romer-king-ii-ats-baby-toddler-car-seats-seat-belt-child-others-child-king-car-seat.png"
                 },
                 new AdditionalService
                 {
@@ -33,7 +33,7 @@ namespace WebShop.API.Data
                     Description = "Forward-facing booster seat for children aged 4-12. Adjustable height.",
                     PricePerDay = 6.00m,
                     IsAvailable = true,
-                    IconUrl = "https://example.com/icons/booster-seat.svg"
+                    IconUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS1Y6eV0kO0dMSzJPZitM_iIvSn3nBeYKsjxA&s"
                 },
                 new AdditionalService
                 {
@@ -41,7 +41,7 @@ namespace WebShop.API.Data
                     Description = "Add an additional authorized driver to the rental agreement. Driver must present valid license.",
                     PricePerDay = 10.00m,
                     IsAvailable = true,
-                    IconUrl = "https://example.com/icons/driver.svg"
+                    IconUrl = "https://bendovizasvadbu.com/wp-content/uploads/2020/08/darko-lazic.png"
                 },
                 new AdditionalService
                 {
@@ -49,7 +49,7 @@ namespace WebShop.API.Data
                     Description = "Portable 4G WiFi router with unlimited data. Connect up to 5 devices simultaneously.",
                     PricePerDay = 10.00m,
                     IsAvailable = true,
-                    IconUrl = "https://example.com/icons/wifi.svg"
+                    IconUrl = "https://png.pngtree.com/png-vector/20251125/ourlarge/pngtree-compact-white-and-silver-mobile-wifi-router-with-4g-lte-connectivity-png-image_18024825.webp"
                 },
                 new AdditionalService
                 {
@@ -57,7 +57,7 @@ namespace WebShop.API.Data
                     Description = "Winter tire chains for safe driving on snowy and icy mountain roads. Required in some regions during winter.",
                     PricePerDay = 15.00m,
                     IsAvailable = true,
-                    IconUrl = "https://example.com/icons/snow-chains.svg"
+                    IconUrl = "https://p7.hiclipart.com/preview/339/319/631/tire-snow-chains-lawn-mowers-chain.jpg"
                 },
                 new AdditionalService
                 {
@@ -65,7 +65,7 @@ namespace WebShop.API.Data
                     Description = "Roof-mounted ski and snowboard carrier. Holds up to 4 pairs of skis or 2 snowboards.",
                     PricePerDay = 12.00m,
                     IsAvailable = true,
-                    IconUrl = "https://example.com/icons/ski-rack.svg"
+                    IconUrl = "https://e7.pngegg.com/pngimages/527/138/png-clipart-jeep-cherokee-xj-jeep-liberty-jeep-cj-jeep-wrangler-roof-rack-angle-car-thumbnail.png"
                 },
                 new AdditionalService
                 {
@@ -73,7 +73,7 @@ namespace WebShop.API.Data
                     Description = "Electronic toll payment device for highways. Automatically charges tolls, avoiding queues at toll booths.",
                     PricePerDay = 3.00m,
                     IsAvailable = true,
-                    IconUrl = "https://example.com/icons/toll.svg"
+                    IconUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJwZsMGH3VSvG9TCwrS_ZHLe821f10M79K2w&s"
                 }
             };
 

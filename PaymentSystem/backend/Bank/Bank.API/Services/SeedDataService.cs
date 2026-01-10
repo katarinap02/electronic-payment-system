@@ -1,4 +1,4 @@
-﻿using Bank.API.Data;
+using Bank.API.Data;
 using Bank.API.Models;
 using System.Security.Cryptography;
 using System.Text;
@@ -20,7 +20,7 @@ namespace Bank.API.Services
         {
             try
             {
-                // Proveri da li već postoje podaci
+                // Proveri da li vec postoje podaci
                 if (_context.Customers.Any())
                 {
                     _logger.LogInformation("Database already seeded.");
@@ -86,7 +86,7 @@ namespace Bank.API.Services
             var customer = new Customer
             {
                 Id = "CUST_BUYER001",
-                FullName = "Petar Petrović",
+                FullName = "Petar Petrovic",
                 EmailHash = HashData("petar.petrovic@example.com"),
                 PhoneHash = HashData("+381641112233"),
                 Status = Customer.CustomerStatus.ACTIVE,
@@ -101,7 +101,7 @@ namespace Bank.API.Services
         {
             var account = new BankAccount
             {
-                AccountNumber = "MER001EUR001",
+                AccountNumber = "RS35260005601001611379",
                 SwiftCode = "BACXRSBG",
                 Balance = 0,
                 AvailableBalance = 0,
@@ -122,7 +122,7 @@ namespace Bank.API.Services
         {
             var account = new BankAccount
             {
-                AccountNumber = "CUST001EUR001",
+                AccountNumber = "RS35265005601001234567",
                 SwiftCode = "BACXRSBG",
                 Balance = 0,
                 AvailableBalance = 0,
