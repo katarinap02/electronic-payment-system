@@ -28,11 +28,11 @@
 
       <div v-if="daysCount > 0" class="rental-summary">
         <div class="summary-item">
-          <span class="icon">📅</span>
+          <span class="icon">From</span>
           <span class="text">{{ daysCount }} day{{ daysCount > 1 ? 's' : '' }}</span>
         </div>
         <div class="summary-item">
-          <span class="icon">📍</span>
+          <span class="icon">To</span>
           <span class="text">{{ formatDate(startDate) }} - {{ formatDate(endDate) }}</span>
         </div>
       </div>

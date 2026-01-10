@@ -333,6 +333,9 @@ namespace Bank.API.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<string>("PaymentMethodCode")
+                        .HasColumnType("text");
+
                     b.Property<string>("SuccessUrl")
                         .HasColumnType("text");
 

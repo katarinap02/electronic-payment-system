@@ -13,6 +13,7 @@ namespace Bank.API.Models
         public decimal Amount { get; set; }
         public string Currency { get; set; } = "EUR";
         public TransactionStatus Status { get; set; } = TransactionStatus.PENDING;
+        public string? PaymentMethodCode { get; set; } // CREDIT_CARD ili IPS_SCAN
         public DateTime PspTimestamp { get; set; } //iz tabele 2, timestamp transakcije kod PSP-a
         public DateTime ExpiresAt { get; set; } //ogranici vremenski, stavka 4a
 

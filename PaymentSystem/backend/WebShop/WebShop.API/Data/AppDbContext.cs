@@ -11,6 +11,7 @@ namespace WebShop.API.Data
         public DbSet<Vehicle> Vehicles { get; set; }
         public DbSet<InsurancePackage> InsurancePackages { get; set; }
         public DbSet<AdditionalService> AdditionalServices { get; set; }
+        public DbSet<Rental> Rentals { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -76,6 +77,47 @@ namespace WebShop.API.Data
                 entity.Property(e => e.IconUrl).HasMaxLength(500);
                 entity.Property(e => e.CreatedAt).IsRequired();
                 entity.Property(e => e.UpdatedAt).IsRequired();
+            });
+
+            // Rental entity configuration
+            modelBuilder.Entity<Rental>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                
+                // Foreign keys
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasOne(e => e.Vehicle)
+                    .WithMany()
+                    .HasForeignKey(e => e.VehicleId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                // Properties
+                entity.Property(e => e.StartDate).IsRequired();
+                entity.Property(e => e.EndDate).IsRequired();
+                entity.Property(e => e.RentalDays).IsRequired();
+                entity.Property(e => e.AdditionalServices).HasMaxLength(1000);
+                entity.Property(e => e.AdditionalServicesPrice).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.InsuranceType).HasMaxLength(50);
+                entity.Property(e => e.InsurancePrice).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.VehiclePricePerDay).IsRequired().HasColumnType("decimal(18,2)");
+                entity.Property(e => e.TotalPrice).IsRequired().HasColumnType("decimal(18,2)");
+                entity.Property(e => e.PaymentId).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.GlobalTransactionId).HasMaxLength(100);
+                entity.Property(e => e.Currency).IsRequired().HasMaxLength(10);
+                entity.Property(e => e.PaymentMethod).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.Status).IsRequired().HasMaxLength(20).HasDefaultValue("Active");
+                entity.Property(e => e.CreatedAt).IsRequired();
+                entity.Property(e => e.Notes).HasMaxLength(500);
+                
+                // Indexes
+                entity.HasIndex(e => e.PaymentId).IsUnique();
+                entity.HasIndex(e => e.UserId);
+                entity.HasIndex(e => e.VehicleId);
+                entity.HasIndex(e => e.Status);
             });
         }
     }

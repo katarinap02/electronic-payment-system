@@ -1,4 +1,4 @@
-﻿using Bank.API.DTOs;
+using Bank.API.DTOs;
 using Bank.API.Models;
 using Bank.API.Repositories;
 using System.Security.Cryptography;
@@ -12,6 +12,7 @@ namespace Bank.API.Services
         private readonly CardRepository _cardRepo;
         private readonly CardTokenRepository _tokenRepo;
         private readonly CardService _cardService;
+        private readonly NbsQrCodeService _qrCodeService;
         private readonly IConfiguration _configuration;
         private readonly ILogger<PaymentService> _logger;
 
@@ -22,18 +23,19 @@ namespace Bank.API.Services
             CardTokenRepository tokenRepo,
             IConfiguration configuration,
             ILogger<PaymentService> logger, 
-            CardService cardService)
+            CardService cardService,
+            NbsQrCodeService qrCodeService)
         {
             _transactionRepo = transactionRepo;
             _accountRepo = accountRepo;
             _cardRepo = cardRepo;
             _tokenRepo = tokenRepo;
             _cardService = cardService;
+            _qrCodeService = qrCodeService;
             _configuration = configuration;
             _logger = logger;
         }
 
-          //  Kreiranje PAYMENT_URL i PAYMENT_ID za PSP (specifikacija tačka 2)
         public PaymentResponse CreatePaymentUrl(PaymentRequest request)
         {
             try
@@ -53,16 +55,16 @@ namespace Bank.API.Services
                     throw new ArgumentException("Merchant not found or inactive");
                 }
 
-                // 2. Provera duple transakcije po STAN-u (jedinstven između PSP-a i banke)
+                // 2. Provera duple transakcije po STAN-u (jedinstven izmedu PSP-a i banke)
                 if (_transactionRepo.HasDuplicateTransactionByStan(request.Stan))
                 {
                     _logger.LogWarning($"Duplicate STAN detected: {request.Stan}");
 
-                    // Pronađi postojeću transakciju sa ovim STAN-om
+                    // Pronadi postojecu transakciju sa ovim STAN-om
                     var existingTransaction = _transactionRepo.GetByStan(request.Stan);
                     if (existingTransaction != null && !string.IsNullOrEmpty(existingTransaction.PaymentId))
                     {
-                        // Vrati postojeću ako je duplikat (idempotentnost)
+                        // Vrati postojecu ako je duplikat (idempotentnost)
                         return new PaymentResponse
                         {
                             PaymentUrl = GeneratePaymentUrl(existingTransaction.PaymentId),
@@ -75,11 +77,11 @@ namespace Bank.API.Services
                     throw new InvalidOperationException($"Duplicate STAN: {request.Stan}");
                 }
 
-                // Generiše PAYMENT_ID i PAYMENT_URL 
+                // Generi�e PAYMENT_ID i PAYMENT_URL 
                 var paymentId = GenerateSecurePaymentId();
                 var paymentUrl = GeneratePaymentUrl(paymentId);
 
-                // Kreira transakciju (STAN za praćenje transakcije)
+                // Kreira transakciju (STAN za pracenje transakcije)
                 var transaction = _transactionRepo.CreateTransaction(
                     merchantId: request.MerchantId,
                     amount: request.Amount,
@@ -90,11 +92,12 @@ namespace Bank.API.Services
                     merchantAccountId: merchantAccount.Id,
                     successUrl: request.SuccessUrl,
                     failedUrl: request.FailedUrl,
-                    errorUrl: request.ErrorUrl);
+                    errorUrl: request.ErrorUrl,
+                    paymentMethodCode: request.PaymentMethodCode);
 
                 
 
-                // 6. Sačuvaj PAYMENT_ID u transakciju
+                // 6. Sacuvaj PAYMENT_ID u transakciju
                 transaction.PaymentId = paymentId;
                 _transactionRepo.UpdatePaymentId(transaction.Id, paymentId);
 
@@ -124,7 +127,7 @@ namespace Bank.API.Services
                 if (transaction == null)
                     throw new ArgumentException("Invalid payment ID");
 
-                // Proveri da li je transakcija još uvek validna 
+                // Proveri da li je transakcija jo� uvek validna 
                 if (!_transactionRepo.IsTransactionValid(transaction.Id))
                 {
                     _logger.LogWarning($"Expired or invalid payment form requested: {paymentId}");
@@ -135,6 +138,9 @@ namespace Bank.API.Services
                 if (merchantAccount == null)
                     throw new ArgumentException("Merchant not found");
 
+                // Detektuj da li je QR placanje na osnovu PaymentMethodCode
+                bool isQrPayment = transaction.PaymentMethodCode == "IPS_SCAN";
+
                 return new PaymentFormResponse
                 {
                     PaymentId = paymentId,
@@ -142,7 +148,7 @@ namespace Bank.API.Services
                     Currency = transaction.Currency,
                     MerchantName = merchantAccount.Customer?.FullName ?? "Unknown Merchant",
                     ExpiresAt = transaction.ExpiresAt,
-                    IsQrPayment = false // Za sada samo kartica
+                    IsQrPayment = isQrPayment
                 };
             }
             catch (Exception ex)
@@ -202,7 +208,7 @@ namespace Bank.API.Services
                 //Tokenizacija kartice (PCI DSS compliance)
                 var cardToken = _tokenRepo.CreateToken(card.Id, transaction.Id);
 
-                // 6. Pronađi customer account (pošto je sve u istoj banci)
+                // 6. Pronadi customer account (po�to je sve u istoj banci)
                 // lookup po PAN-u ili customer ID-u
                 var customerAccount = _accountRepo.FindCustomerAccount(card.CustomerId);
                 if (customerAccount == null)
@@ -249,7 +255,7 @@ namespace Bank.API.Services
             {
                 _logger.LogError(ex, $"Error processing card payment for PaymentId: {cardInfo.PaymentId}");
 
-                // Ažuriraj status na FAILED ako je došlo do greške
+                // A�uriraj status na FAILED ako je do�lo do gre�ke
                 try
                 {
                     var transaction = _transactionRepo.GetByPaymentId(cardInfo.PaymentId);
@@ -393,7 +399,7 @@ namespace Bank.API.Services
             public bool ValidateCardWithCvv(string cardNumber, string cvv)
             {
 
-                // 2. U realnom sistemu - poziv ka Visa/Mastercard mreži
+                // 2. U realnom sistemu - poziv ka Visa/Mastercard mre�i
                 //    ili internom sistemu banke
                 //var response = _cardNetworkApi.ValidateCvv(cardNumber, cvv);
 
@@ -433,7 +439,7 @@ namespace Bank.API.Services
             if (string.IsNullOrWhiteSpace(enteredName) || string.IsNullOrWhiteSpace(storedName))
                 return false;
 
-            // Ukloni višak razmaka i konvertuj u uppercase 
+            // Ukloni vi�ak razmaka i konvertuj u uppercase 
             var entered = enteredName.Trim().ToUpperInvariant();
             var stored = storedName.Trim().ToUpperInvariant();
 
@@ -474,5 +480,168 @@ namespace Bank.API.Services
             }
         }
 
+        // ==================== QR CODE PAYMENT METHODS ====================
+
+        public async Task<QrCodeGenerationResult> GenerateQrCodeForPaymentAsync(string paymentId, int size = 300)
+        {
+            try
+            {
+                var transaction = _transactionRepo.GetByPaymentId(paymentId);
+                if (transaction == null)
+                    throw new ArgumentException("Invalid payment ID");
+
+                if (!_transactionRepo.IsTransactionValid(transaction.Id))
+                    throw new InvalidOperationException("Transaction has expired");
+
+                var merchantAccount = _accountRepo.GetMerchantByMerchantId(transaction.MerchantId);
+                if (merchantAccount == null)
+                    throw new ArgumentException("Merchant not found");
+
+                var qrPayload = new QrCodePayload
+                {
+                    PaymentId = paymentId,
+                    ReceiverAccountNumber = merchantAccount.AccountNumber,
+                    ReceiverName = merchantAccount.Customer?.FullName ?? "Merchant",
+                    Amount = transaction.Amount,
+                    Currency = transaction.Currency,
+                    PaymentPurpose = $"Payment #{transaction.Stan}"
+                };
+
+                var result = await _qrCodeService.GenerateQrCodeAsync(qrPayload, size);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error generating QR code for payment: {paymentId}");
+                return new QrCodeGenerationResult { Success = false, ErrorMessage = ex.Message };
+            }
+        }
+
+        public async Task<PaymentStatusResponse> ConfirmQrPayment(string paymentId)
+        {
+            try
+            {
+                var transaction = _transactionRepo.GetByPaymentId(paymentId);
+                if (transaction == null)
+                    throw new ArgumentException("Invalid payment ID");
+
+                // Pronađi merchant račun (webshop)
+                var merchantAccount = _accountRepo.GetMerchantByMerchantId(transaction.MerchantId);
+                if (merchantAccount == null)
+                    throw new InvalidOperationException("Merchant account not found");
+
+                // Dinamički pronađi kupčev račun koji ima dovoljno sredstava
+                // U realnom scenariju, ovo bi bio authenticated user iz mBanking aplikacije
+                // Za demo - koristimo CUST_BUYER001 kao simuliranog kupca
+                var customerAccount = _accountRepo.FindCustomerAccount("CUST_BUYER001");
+                
+                if (customerAccount == null)
+                {
+                    _logger.LogWarning($"Customer account not found for QR payment: {paymentId}");
+                    throw new InvalidOperationException("Customer account not found");
+                }
+
+                // Provera sredstava - da li kupac može da plati
+                if (customerAccount.Balance < transaction.Amount)
+                {
+                    _logger.LogWarning($"Insufficient funds for QR payment: {paymentId}, Required: {transaction.Amount} {transaction.Currency}, Available: {customerAccount.Balance} {customerAccount.Currency}");
+                    throw new InvalidOperationException($"Insufficient funds. Required: {transaction.Amount} {transaction.Currency}, Available: {customerAccount.Balance} {customerAccount.Currency}");
+                }
+
+                // Provera valute - moraju biti iste
+                if (customerAccount.Currency != transaction.Currency)
+                {
+                    _logger.LogWarning($"Currency mismatch for QR payment: {paymentId}, Transaction: {transaction.Currency}, Account: {customerAccount.Currency}");
+                    throw new InvalidOperationException($"Currency mismatch. Transaction requires {transaction.Currency}, but account is in {customerAccount.Currency}");
+                }
+
+                _logger.LogInformation($"Processing QR payment: {paymentId}, Customer: {customerAccount.AccountNumber}, Merchant: {merchantAccount.AccountNumber}, Amount: {transaction.Amount} {transaction.Currency}");
+
+                // Prebaci pare sa kupčevog računa na webshop račun
+                customerAccount.Balance -= transaction.Amount;
+                customerAccount.AvailableBalance -= transaction.Amount; // Skini i sa AvailableBalance za QR placanje
+                merchantAccount.Balance += transaction.Amount;
+                _accountRepo.UpdateAccount(customerAccount);
+                _accountRepo.UpdateAccount(merchantAccount);
+
+                // Ažuriraj transakciju
+                transaction.Status = PaymentTransaction.TransactionStatus.AUTHORIZED;
+                transaction.GlobalTransactionId = Guid.NewGuid().ToString();
+                transaction.CustomerAccountId = customerAccount.Id;
+                transaction.CustomerId = customerAccount.CustomerId;
+                _transactionRepo.UpdateTransaction(transaction);
+
+                _logger.LogInformation($"QR payment confirmed successfully: {paymentId}, GlobalTxId: {transaction.GlobalTransactionId}");
+
+                // Extract PSP Payment ID from STAN (format: PSP-{id}-{timestamp})
+                var stanParts = transaction.Stan.Split('-');
+                var pspPaymentId = stanParts.Length > 1 ? stanParts[1] : "0";
+
+                return new PaymentStatusResponse
+                {
+                    PaymentId = paymentId,
+                    Status = PaymentTransaction.TransactionStatus.AUTHORIZED.ToString(),
+                    Success = true,
+                    Amount = transaction.Amount,
+                    Currency = transaction.Currency,
+                    GlobalTransactionId = transaction.GlobalTransactionId,
+                    Message = "Payment confirmed successfully",
+                    RedirectUrl = _configuration["PSPFrontendUrl"] + $"/payment/{pspPaymentId}?status=success&bankPaymentId={transaction.PaymentId}"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error confirming QR payment: {paymentId}");
+                return new PaymentStatusResponse
+                {
+                    PaymentId = paymentId,
+                    Status = PaymentTransaction.TransactionStatus.FAILED.ToString(),
+                    Success = false,
+                    ErrorMessage = ex.Message
+                };
+            }
+        }
+
+        public PaymentStatusResponse GetPaymentStatusResponse(string paymentId)
+        {
+            try
+            {
+                var transaction = _transactionRepo.GetByPaymentId(paymentId);
+                if (transaction == null)
+                {
+                    return new PaymentStatusResponse
+                    {
+                        PaymentId = paymentId,
+                        Status = "NOT_FOUND",
+                        Success = false,
+                        ErrorMessage = "Payment not found"
+                    };
+                }
+
+                return new PaymentStatusResponse
+                {
+                    PaymentId = paymentId,
+                    Status = transaction.Status.ToString(),
+                    Success = transaction.Status == PaymentTransaction.TransactionStatus.AUTHORIZED || transaction.Status == PaymentTransaction.TransactionStatus.CAPTURED,
+                    Amount = transaction.Amount,
+                    Currency = transaction.Currency,
+                    GlobalTransactionId = transaction.GlobalTransactionId,
+                    Message = transaction.Status == PaymentTransaction.TransactionStatus.PENDING ? "Waiting for payment" : "Payment processed"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new PaymentStatusResponse
+                {
+                    PaymentId = paymentId,
+                    Status = "ERROR",
+                    Success = false,
+                    ErrorMessage = ex.Message
+                };
+            }
+        }
+
     }
 }
+
+

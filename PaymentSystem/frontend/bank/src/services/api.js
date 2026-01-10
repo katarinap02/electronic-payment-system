@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Bank API je na portu 80 unutar Docker network-a
-const API_BASE = '';
+// Bank API URL - koristi environment varijablu ili prazan string za proxy
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 const api = axios.create({
   baseURL: API_BASE,

@@ -71,9 +71,68 @@
     
     <!-- Za QR plaćanja -->
     <div v-if="paymentData && paymentData.isQrPayment" class="qr-payment">
-      <h3>QR Code Payment</h3>
-      <p>Please scan the QR code to complete your payment.</p>
-      <!-- Ovdje možeš dodati QR code komponentu -->
+      <h3>🔲 IPS Skeniraj & Plati</h3>
+      <p class="qr-instruction">Skenirajte QR kod pomoću vaše mBanking aplikacije da dovršite plaćanje</p>
+      
+      <!-- Loading QR code -->
+      <div v-if="loadingQr" class="qr-loading">
+        <div class="spinner"></div>
+        <p>Generiše se QR kod...</p>
+      </div>
+
+      <!-- QR Code Display -->
+      <div v-else-if="qrCodeImage" class="qr-code-container">
+        <img :src="qrCodeImage" alt="NBS IPS QR Code" class="qr-code-image" />
+        <div class="qr-logo-badge">NBS IPS QR</div>
+      </div>
+
+      <!-- QR Error -->
+      <div v-else-if="qrError" class="qr-error">
+        <p>⚠️ {{ qrError }}</p>
+        <button @click="generateQrCode" class="btn-retry">Pokušaj ponovo</button>
+      </div>
+
+      <!-- Payment Status -->
+      <div v-if="qrCodeImage" class="payment-status">
+        <div v-if="checkingStatus" class="status-checking">
+          <div class="pulse-dot"></div>
+          <span>Čeka se potvrda plaćanja...</span>
+        </div>
+        <div v-else-if="paymentConfirmed" class="status-success">
+          <span class="checkmark">✓</span>
+          <span>Plaćanje uspešno!</span>
+        </div>
+        
+        <!-- Payment Info -->
+        <div class="qr-payment-details">
+          <div class="detail-item">
+            <span class="label">Iznos:</span>
+            <span class="value">{{ paymentData.amount }} {{ paymentData.currency }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">Trgovac:</span>
+            <span class="value">{{ paymentData.merchantName }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">Ističe:</span>
+            <span class="value">{{ formatDate(paymentData.expiresAt) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Demo Button (za testiranje - simulira skeniranje) -->
+      <div v-if="qrCodeImage && !paymentConfirmed" class="demo-section">
+        <hr class="divider" />
+        <p class="demo-note">Demo: Kliknite dugme da simulirate skeniranje QR koda</p>
+        <button @click="simulateQrScan" :disabled="simulating" class="btn-simulate">
+          {{ simulating ? 'Procesuira se...' : '📱 Simuliraj skeniranje' }}
+        </button>
+      </div>
+
+      <!-- Cancel button -->
+      <button v-if="!paymentConfirmed" @click="cancelPayment" class="btn-cancel">
+        Otkaži plaćanje
+      </button>
     </div>
     
     <!-- Ako nema podataka -->
@@ -85,7 +144,8 @@
 
 <script>
 import { useRoute } from 'vue-router';
-import axios from 'axios';
+import api from '@/services/api.js';
+const axios = api;
 
 export default {
   name: 'PaymentForm',
@@ -103,27 +163,41 @@ export default {
       },
       processing: false,
       error: '',
-      loading: true
+      loading: true,
+      // QR Code related
+      qrCodeImage: null,
+      loadingQr: false,
+      qrError: null,
+      checkingStatus: false,
+      paymentConfirmed: false,
+      simulating: false,
+      statusCheckInterval: null
     };
   },
   async mounted() {
     const route = useRoute();
     this.paymentId = route.params.paymentId;
     this.cardInfo.paymentId = this.paymentId;
-    
+
     console.log('Fetching payment data for:', this.paymentId);
-    
+
     try {
       const response = await axios.get(`/api/payment/form/${this.paymentId}`);
       console.log('Payment data response:', response.data);
-      
+
       if (response.data) {
         this.paymentData = response.data;
         this.cardInfo.isQrPayment = this.paymentData.isQrPayment;
+
+        // Ako je QR plaćanje, generiši QR kod
+        if (this.paymentData.isQrPayment) {
+          await this.generateQrCode();
+          this.startStatusPolling();
+        }
       } else {
         this.error = 'No payment data received';
       }
-      
+
     } catch (err) {
       console.error('Error fetching payment data:', err);
       console.error('Error response:', err.response);
@@ -132,11 +206,17 @@ export default {
       this.loading = false;
     }
   },
+  beforeUnmount() {
+    // Očisti polling interval kada se komponenta unmount-uje
+    if (this.statusCheckInterval) {
+      clearInterval(this.statusCheckInterval);
+    }
+  },
   methods: {
     async submitPayment() {
       this.processing = true;
       this.error = '';
-      
+
       try {
         const response = await axios.post('/api/payment/process', this.cardInfo);
         console.log('Payment response:', response.data);
@@ -156,6 +236,102 @@ export default {
         this.processing = false;
       }
     },
+    
+    // QR Code Methods
+    async generateQrCode() {
+      this.loadingQr = true;
+      this.qrError = null;
+
+      try {
+        const response = await axios.post(`/api/payment/qr/generate/${this.paymentId}?size=300`);
+        console.log('QR Code response:', response.data);
+
+        if (response.data.success && response.data.qrCodeDataUrl) {
+          this.qrCodeImage = response.data.qrCodeDataUrl;
+        } else {
+          this.qrError = response.data.errorMessage || 'Failed to generate QR code';
+        }
+      } catch (err) {
+        console.error('QR generation error:', err);
+        this.qrError = err.response?.data?.error || 'Failed to generate QR code';
+      } finally {
+        this.loadingQr = false;
+      }
+    },
+
+    startStatusPolling() {
+      // Proveri status svakih 3 sekunde
+      this.checkingStatus = true;
+      this.statusCheckInterval = setInterval(async () => {
+        await this.checkPaymentStatus();
+      }, 3000);
+    },
+
+    async checkPaymentStatus() {
+      try {
+        const response = await axios.get(`/api/payment/qr/status/${this.paymentId}`);
+        console.log('Payment status:', response.data);
+
+        if (response.data.status === 'AUTHORIZED' || response.data.status === 'COMPLETED') {
+          this.paymentConfirmed = true;
+          this.checkingStatus = false;
+          clearInterval(this.statusCheckInterval);
+
+          // Redirektuj nakon 2 sekunde
+          setTimeout(() => {
+            if (response.data.redirectUrl) {
+              window.location.href = response.data.redirectUrl;
+            }
+          }, 2000);
+        }
+      } catch (err) {
+        console.error('Status check error:', err);
+        // Ne zaustavljaj polling ako je greška
+      }
+    },
+
+    async simulateQrScan() {
+      this.simulating = true;
+      
+      try {
+        const response = await axios.post(`/api/payment/qr/confirm/${this.paymentId}`);
+        console.log('QR scan simulation:', response.data);
+
+        if (response.data.success) {
+          this.paymentConfirmed = true;
+          this.checkingStatus = false;
+          clearInterval(this.statusCheckInterval);
+
+          // Redirektuj nakon 2 sekunde
+          setTimeout(() => {
+            if (response.data.redirectUrl) {
+              window.location.href = response.data.redirectUrl;
+            }
+          }, 2000);
+        } else {
+          alert('Simulacija neuspešna: ' + (response.data.errorMessage || 'Unknown error'));
+        }
+      } catch (err) {
+        console.error('QR scan simulation error:', err);
+        alert('Greška pri simulaciji: ' + (err.response?.data?.error || err.message));
+      } finally {
+        this.simulating = false;
+      }
+    },
+
+    async cancelPayment() {
+      if (confirm('Da li ste sigurni da želite da otkažete plaćanje?')) {
+        try {
+          await axios.post(`/api/payment/cancel/${this.paymentId}`);
+          alert('Plaćanje otkazano');
+          // Možeš da redirektуješ nazad ili zatvoriš prozor
+        } catch (err) {
+          console.error('Cancel error:', err);
+          alert('Greška pri otkazivanju plaćanja');
+        }
+      }
+    },
+
     formatDate(date) {
       const d = new Date(date);
       return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
@@ -311,21 +487,274 @@ button:disabled {
 
 .qr-payment {
   text-align: center;
-  padding: 30px;
-  background: #f0f9ff;
-  border-radius: 12px;
+  padding: 40px 30px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
   margin-top: 20px;
-  border: 2px dashed #90cdf4;
+  color: white;
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
 }
 
 .qr-payment h3 {
-  color: #2b6cb0;
+  color: white;
   margin-top: 0;
+  font-size: 24px;
+  margin-bottom: 10px;
 }
 
-.qr-payment p {
-  color: #4a5568;
+.qr-instruction {
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 30px;
+  font-size: 15px;
+}
+
+.qr-loading {
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.qr-loading .spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.qr-loading p {
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+}
+
+.qr-code-container {
+  position: relative;
+  display: inline-block;
+  padding: 20px;
+  background: white;
+  border-radius: 16px;
+  margin: 20px auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.qr-code-image {
+  display: block;
+  width: 300px;
+  height: 300px;
+  border-radius: 8px;
+}
+
+.qr-logo-badge {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2b6cb0;
+  color: white;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.qr-error {
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  margin: 20px 0;
+}
+
+.qr-error p {
+  color: white;
+  margin-bottom: 15px;
+}
+
+.btn-retry {
+  background: white;
+  color: #667eea;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-retry:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+}
+
+.payment-status {
+  margin-top: 30px;
+  padding: 25px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.status-checking {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: white;
+  font-size: 16px;
   margin-bottom: 20px;
+}
+
+.pulse-dot {
+  width: 12px;
+  height: 12px;
+  background: #48bb78;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.3);
+  }
+}
+
+.status-success {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: white;
+  font-size: 18px;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+.checkmark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #48bb78;
+  border-radius: 50%;
+  font-size: 20px;
+  animation: checkmarkPop 0.5s ease forwards;
+}
+
+@keyframes checkmarkPop {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.qr-payment-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.detail-item .label {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+}
+
+.detail-item .value {
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.demo-section {
+  margin-top: 30px;
+}
+
+.divider {
+  border: none;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 30px 0 20px;
+}
+
+.demo-note {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  margin-bottom: 15px;
+  font-style: italic;
+}
+
+.btn-simulate {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 14px 28px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 15px;
+  width: 100%;
+  max-width: 300px;
+}
+
+.btn-simulate:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-2px);
+}
+
+.btn-simulate:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-cancel {
+  background: transparent;
+  color: white;
+  padding: 12px 24px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  margin-top: 20px;
+  width: 100%;
+  max-width: 200px;
+}
+
+.btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loading, .error {

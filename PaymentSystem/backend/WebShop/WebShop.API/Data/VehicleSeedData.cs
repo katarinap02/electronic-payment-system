@@ -28,7 +28,7 @@ namespace WebShop.API.Data
                     Mileage = 15000,
                     Color = "White",
                     Description = "Economical and reliable city car",
-                    ImageUrl = "https://example.com/images/polo.jpg"
+                    ImageUrl = "https://d62-a.sdn.cz/d_62/c_img_QQ_0/QsGi/volkswagen-polo.jpeg?fl=cro,46,203,1388,780%7Cres,1200,,1%7Cjpg,80,,1"
                 },
                 new Vehicle
                 {
@@ -45,7 +45,7 @@ namespace WebShop.API.Data
                     Mileage = 22000,
                     Color = "Red",
                     Description = "Compact and fuel-efficient",
-                    ImageUrl = "https://example.com/images/punto.jpg"
+                    ImageUrl = "https://www.deusrentacar.rs/wp-content/uploads/2019/10/Fiat_Grande_Punto-e1590531719242.jpg"
                 },
 
                 // Comfort vehicles
@@ -64,7 +64,7 @@ namespace WebShop.API.Data
                     Mileage = 8000,
                     Color = "Black",
                     Description = "Comfortable mid-size sedan with automatic transmission",
-                    ImageUrl = "https://example.com/images/passat.jpg"
+                    ImageUrl = "https://dmotion.rs/wp-content/uploads/2019/02/vw-passat-facelift-2.jpg"
                 },
                 new Vehicle
                 {
@@ -81,7 +81,7 @@ namespace WebShop.API.Data
                     Mileage = 12000,
                     Color = "Gray",
                     Description = "Spacious and practical family car",
-                    ImageUrl = "https://example.com/images/octavia.jpg"
+                    ImageUrl = "https://images.autohermes.rs/1583403927/desktop/news-large/2042OCTAVIA-RS-iV-01.4d92a57f08c56c3db884230feb379d16.fit-1450x760.jpg"
                 },
 
                 // Luxury vehicles
@@ -100,7 +100,7 @@ namespace WebShop.API.Data
                     Mileage = 3000,
                     Color = "Silver",
                     Description = "Premium luxury sedan with advanced features",
-                    ImageUrl = "https://example.com/images/e-class.jpg"
+                    ImageUrl = "https://stimg.cardekho.com/images/carexteriorimages/930x620/Mercedes-Benz/E-Class/9790/1763471140336/front-left-side-47.jpg"
                 },
                 new Vehicle
                 {
@@ -117,7 +117,7 @@ namespace WebShop.API.Data
                     Mileage = 5000,
                     Color = "Blue",
                     Description = "Luxurious and powerful hybrid sedan",
-                    ImageUrl = "https://example.com/images/bmw-5.jpg"
+                    ImageUrl = "https://hips.hearstapps.com/hmg-prod/images/2024-bmw-530i-xdrive-118-65808a4c3d44a.jpg?crop=0.561xw:0.474xh;0.171xw,0.327xh&resize=1200:*"
                 },
 
                 // SUV vehicles
@@ -136,7 +136,7 @@ namespace WebShop.API.Data
                     Mileage = 10000,
                     Color = "White",
                     Description = "Reliable hybrid SUV perfect for family trips",
-                    ImageUrl = "https://example.com/images/rav4.jpg"
+                    ImageUrl = "https://www.automanijak.com/resources/images/variant/1580/rav4_5.jpg"
                 },
                 new Vehicle
                 {
@@ -153,7 +153,7 @@ namespace WebShop.API.Data
                     Mileage = 18000,
                     Color = "Black",
                     Description = "Spacious 7-seater SUV",
-                    ImageUrl = "https://example.com/images/xtrail.jpg"
+                    ImageUrl = "https://images.cdn.autocar.co.uk/sites/autocar.co.uk/files/styles/gallery_slide/public/nissan-x-trail-1.jpg?itok=c4I7u6rC"
                 },
 
                 // Van vehicles
@@ -172,7 +172,7 @@ namespace WebShop.API.Data
                     Mileage = 14000,
                     Color = "Silver",
                     Description = "9-seater van perfect for group travel",
-                    ImageUrl = "https://example.com/images/vito.jpg"
+                    ImageUrl = "https://www.automanijak.com/resources/images/variant/1195/v_1.jpg"
                 },
                 new Vehicle
                 {
@@ -189,7 +189,7 @@ namespace WebShop.API.Data
                     Mileage = 20000,
                     Color = "White",
                     Description = "Comfortable van for larger groups",
-                    ImageUrl = "https://example.com/images/transporter.jpg"
+                    ImageUrl = "https://cdn.motor1.com/images/mgl/YAgXej/s1/vw-transporter-und-caravelle-sondermodell-edition-2025.jpg"
                 },
 
                 // Sport vehicles
@@ -208,7 +208,7 @@ namespace WebShop.API.Data
                     Mileage = 2000,
                     Color = "Red",
                     Description = "Sporty and stylish coupe",
-                    ImageUrl = "https://example.com/images/a5.jpg"
+                    ImageUrl = "https://media.audiusa.com/assets/images/hero/11062-0K2A5308.jpg"
                 },
 
                 // Electric vehicle
@@ -227,7 +227,7 @@ namespace WebShop.API.Data
                     Mileage = 1000,
                     Color = "White",
                     Description = "Premium electric sedan with autopilot",
-                    ImageUrl = "https://example.com/images/tesla-model3.jpg"
+                    ImageUrl = "https://cdn.motor1.com/images/mgl/RqMxpA/s3/tesla-model-3-standard-2026.jpg"
                 }
             };
 

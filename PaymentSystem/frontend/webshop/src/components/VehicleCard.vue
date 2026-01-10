@@ -43,7 +43,7 @@
       </div>
       <div class="vehicle-footer">
         <div class="price">
-          <span class="price-amount">${{ vehicle.pricePerDay.toFixed(2) }}</span>
+          <span class="price-amount">€{{ vehicle.pricePerDay.toFixed(2) }}</span>
           <span class="price-label">/ day</span>
         </div>
         <button 

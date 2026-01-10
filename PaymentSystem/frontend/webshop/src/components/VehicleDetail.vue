@@ -37,7 +37,7 @@
 
           <div class="price-section">
             <div class="price">
-              <span class="price-amount">${{ vehicle.pricePerDay.toFixed(2) }}</span>
+              <span class="price-amount">€{{ vehicle.pricePerDay.toFixed(2) }}</span>
               <span class="price-label">per day</span>
             </div>
           </div>
@@ -174,11 +174,48 @@ const handleRentalConfirm = async (rentalData) => {
     // Generate unique order ID
     const orderId = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
+    // Determine currency code for display
+    const currencyCode = rentalData.currency === 0 ? 'EUR' : (rentalData.currency === 1 ? 'USD' : 'RSD');
+    
+    // Convert USD display amount back to EUR for bank payment (all bank accounts are in EUR)
+    // User selected USD and sees 115 USD, but bank needs 100 EUR
+    const paymentAmount = rentalData.currency === 1 
+      ? rentalData.totals.total / 1.15  // Convert USD back to EUR (115 USD / 1.15 = 100 EUR)
+      : rentalData.totals.total;        // EUR - no conversion needed
+    
+    // Sačuvaj rental podatke u sessionStorage za kasnije kreiranje rental zapisa
+    const rentalInfo = {
+      orderId: orderId,
+      vehicleId: vehicle.value.id,
+      startDate: rentalData.startDate,
+      endDate: rentalData.endDate,
+      rentalDays: rentalData.days,
+      insuranceId: rentalData.insurance?.id || null,
+      insuranceType: rentalData.insurance?.name || null,
+      insurancePrice: rentalData.insurance ? rentalData.insurance.pricePerDay * rentalData.days : 0,
+      additionalServiceIds: rentalData.services?.map(s => s.id) || [],
+      additionalServices: rentalData.services?.map(s => s.name) || [],
+      additionalServicesPrice: rentalData.totals.services,
+      vehiclePricePerDay: vehicle.value.pricePerDay,
+      totalPrice: rentalData.totals.total, // Keep USD display amount for user
+      currency: currencyCode,
+      timestamp: Date.now()
+    };
+    
+    sessionStorage.setItem('pendingRental', JSON.stringify(rentalInfo));
+    console.log('Rental info saved to sessionStorage:', rentalInfo);
+    console.log('Display amount:', rentalData.totals.total, currencyCode);
+    console.log('Payment amount (EUR for bank):', paymentAmount, 'EUR');
+    
     // Initialize payment with PSP
+    // For EUR: send 100 EUR
+    // For USD: send 100 EUR for transaction, but PSP should display 115 USD to user
     const paymentResponse = await pspService.initializePayment({
       orderId: orderId,
-      amount: rentalData.totals.total,
-      currency: rentalData.currency // 0=RSD, 1=EUR, 2=USD
+      amount: paymentAmount,            // EUR amount for bank transaction (100 EUR)
+      currency: 0,                      // Always EUR (0) for bank - all accounts are in EUR
+      displayAmount: rentalData.totals.total,  // Display amount (115 USD or 100 EUR)
+      displayCurrency: rentalData.currency     // Display currency (0=EUR, 1=USD)
     });
     
     console.log('Payment initialized:', paymentResponse);

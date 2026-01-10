@@ -24,6 +24,10 @@ builder.Services.AddScoped<IInsurancePackageService, InsurancePackageService>();
 builder.Services.AddScoped<IAdditionalServiceRepository, AdditionalServiceRepository>();
 builder.Services.AddScoped<IAdditionalServiceService, AdditionalServiceService>();
 
+// Rental services
+builder.Services.AddScoped<RentalRepository>();
+builder.Services.AddScoped<RentalService>();
+
 //Namestanje CORS-a
 builder.Services.AddCors(options =>
 {

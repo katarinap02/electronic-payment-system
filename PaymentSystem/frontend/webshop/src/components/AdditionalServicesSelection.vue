@@ -130,15 +130,15 @@ const toggleService = (service) => {
 
 const getDefaultIcon = (serviceName) => {
   const name = serviceName.toLowerCase();
-  if (name.includes('gps') || name.includes('navigation')) return '🗺️';
-  if (name.includes('child') || name.includes('seat')) return '👶';
-  if (name.includes('wifi')) return '📶';
-  if (name.includes('insurance')) return '🛡️';
-  if (name.includes('winter') || name.includes('snow')) return '❄️';
-  if (name.includes('bike') || name.includes('rack')) return '🚲';
-  if (name.includes('driver')) return '👨‍✈️';
-  if (name.includes('fuel')) return '⛽';
-  return '✨';
+  if (name.includes('gps') || name.includes('navigation')) return 'GPS';
+  if (name.includes('child') || name.includes('seat')) return 'Child';
+  if (name.includes('wifi')) return 'WiFi';
+  if (name.includes('insurance')) return 'Ins';
+  if (name.includes('winter') || name.includes('snow')) return 'Winter';
+  if (name.includes('bike') || name.includes('rack')) return 'Bike';
+  if (name.includes('driver')) return 'Driver';
+  if (name.includes('fuel')) return 'Fuel';
+  return 'Service';
 };
 
 const handleContinue = () => {

@@ -16,6 +16,7 @@ builder.Services.AddScoped<CustomerRepository>();
 builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<CardService>();
 builder.Services.AddScoped<SeedDataService>();
+builder.Services.AddHttpClient<NbsQrCodeService>(); // HttpClient za NBS API
 builder.Services.AddHostedService<AutoCaptureBackgroundService>();
 
 
@@ -37,7 +38,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5174", "http://frontend-bank:5173")
+            policy.WithOrigins("http://localhost:5174", "http://localhost:5172", "http://frontend-bank:5173")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
