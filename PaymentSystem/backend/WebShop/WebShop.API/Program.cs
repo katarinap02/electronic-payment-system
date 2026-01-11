@@ -83,10 +83,14 @@ using (var scope = app.Services.CreateScope())
         dbContext.Database.Migrate();
         logger.LogInformation("Database migrations applied successfully.");
         
-        logger.LogInformation("Seeding admin user...");
+        logger.LogInformation("Ensuring Rentals table exists...");
+        DatabaseInitializer.Initialize(dbContext);
+        logger.LogInformation("Database initialization completed.");
+
+        logger.LogInformation("Seeding users...");
         UserSeedData.SeedAdminUser(dbContext, passwordService);
-        logger.LogInformation("Admin user seeded successfully.");
-        
+        logger.LogInformation("Users seeded successfully.");
+
         logger.LogInformation("Seeding vehicles...");
         VehicleSeedData.SeedVehicles(dbContext);
         logger.LogInformation("Vehicles seeded successfully.");
@@ -98,6 +102,10 @@ using (var scope = app.Services.CreateScope())
         logger.LogInformation("Seeding additional services...");
         AdditionalServiceSeedData.SeedAdditionalServices(dbContext);
         logger.LogInformation("Additional services seeded successfully.");
+
+        logger.LogInformation("Seeding rentals...");
+        RentalSeedData.SeedRentals(dbContext);
+        logger.LogInformation("Rentals seeded successfully.");
     }
     catch (Exception ex)
     {

@@ -46,11 +46,11 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// PRIMENI MIGRACIJE AUTOMATSKI
+// INICIJALIZUJ BAZU (migracije + kolone)
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    dbContext.Database.Migrate();
+    DatabaseInitializer.Initialize(dbContext);
 }
 
 // Configure the HTTP request pipeline.

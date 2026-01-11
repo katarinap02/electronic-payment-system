@@ -81,9 +81,9 @@
             <button 
               class="btn-rent" 
               @click="openRentalModal"
-              :disabled="vehicle.status !== 'Available'"
+              :disabled="vehicle.status !== 'Available' || !isAuthenticated"
             >
-              {{ vehicle.status === 'Available' ? 'Add to Cart' : 'Not Available' }}
+              {{ !isAuthenticated ? 'Login to Add to Cart' : (vehicle.status === 'Available' ? 'Add to Cart' : 'Not Available') }}
             </button>
           </div>
         </div>
@@ -111,20 +111,25 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useAuthStore } from '../stores/auth';
 import { vehicleApi } from '../services/vehicleService';
 import { pspService } from '../services/pspService';
 import RentalModal from './RentalModal.vue';
 
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore();
 
 const vehicle = ref(null);
 const loading = ref(false);
 const error = ref(null);
 const isModalOpen = ref(false);
 const showSuccessNotification = ref(false);
+
+// Computed property za reaktivno praćenje autentifikacije
+const isAuthenticated = computed(() => authStore.isAuthenticated);
 
 const fetchVehicleDetails = async () => {
   loading.value = true;
@@ -160,6 +165,15 @@ const goBack = () => {
 };
 
 const openRentalModal = () => {
+  console.log('openRentalModal called - isAuthenticated:', isAuthenticated.value);
+  
+  // Provera da li je korisnik ulogovan
+  if (!isAuthenticated.value) {
+    alert('Please login to add vehicles to cart.');
+    router.push('/login');
+    return;
+  }
+  
   isModalOpen.value = true;
 };
 
