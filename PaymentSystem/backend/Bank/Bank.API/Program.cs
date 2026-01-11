@@ -49,8 +49,10 @@ var app = builder.Build();
 // INICIJALIZUJ BAZU (migracije + kolone)
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>(); 
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     DatabaseInitializer.Initialize(dbContext);
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
