@@ -77,10 +77,26 @@ export const useAuthStore = defineStore('auth', {
       
       try {
         const response = await authApi.login(credentials);
+        console.log('Full login response:', JSON.stringify(response.data, null, 2));
         
-        if (response.data.success) {
-          const { token, user } = response.data.data;
-          
+        // Proveri različite formate odgovora
+        let token, user;
+        
+        if (response.data.success && response.data.data) {
+          // Format: { success: true, data: { token, user } }
+          token = response.data.data.token;
+          user = response.data.data.user;
+        } else if (response.data.token) {
+          // Format: { token, user }
+          token = response.data.token;
+          user = response.data.user;
+        } else {
+          console.error('Unexpected response format:', response.data);
+          this.error = 'Invalid response format from server';
+          return { success: false, error: this.error };
+        }
+        
+        if (token && user) {
           // Snimi token i user u localStorage
           localStorage.setItem('token', token);
           localStorage.setItem('user', JSON.stringify(user));
@@ -92,13 +108,21 @@ export const useAuthStore = defineStore('auth', {
           });
           
           console.log('Login success - State updated:', { token: this.token, user: this.user });
+          console.log('localStorage check:', {
+            token: localStorage.getItem('token'),
+            user: localStorage.getItem('user')
+          });
           
           // Sačekaj malo da se state propagira, zatim preusmeri
           await new Promise(resolve => setTimeout(resolve, 100));
           router.push('/dashboard');
           return { success: true };
+        } else {
+          this.error = 'Token or user data missing';
+          return { success: false, error: this.error };
         }
       } catch (error) {
+        console.error('Login error:', error);
         this.error = error.response?.data?.message || 'Prijava nije uspela';
         return { success: false, error: this.error };
       } finally {
@@ -107,10 +131,27 @@ export const useAuthStore = defineStore('auth', {
     },
 
     logout() {
+      console.log('Logout called - clearing localStorage and state');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      this.token = null;
-      this.user = null;
+      
+      // Koristi $patch za reaktivno ažuriranje
+      this.$patch({
+        token: null,
+        user: null,
+        error: null
+      });
+      
+      console.log('After logout - State:', {
+        token: this.token,
+        user: this.user,
+        isAuthenticated: this.isAuthenticated
+      });
+      console.log('After logout - localStorage:', {
+        token: localStorage.getItem('token'),
+        user: localStorage.getItem('user')
+      });
+      
       router.push('/login');
     },
 
