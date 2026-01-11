@@ -87,6 +87,10 @@ using (var scope = app.Services.CreateScope())
         DatabaseInitializer.Initialize(dbContext);
         logger.LogInformation("Database initialization completed.");
 
+        logger.LogInformation("Seeding users...");
+        UserSeedData.SeedAdminUser(dbContext, passwordService);
+        logger.LogInformation("Users seeded successfully.");
+
         logger.LogInformation("Seeding vehicles...");
         VehicleSeedData.SeedVehicles(dbContext);
         logger.LogInformation("Vehicles seeded successfully.");
