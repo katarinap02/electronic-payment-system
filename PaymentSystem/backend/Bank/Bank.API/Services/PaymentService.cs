@@ -561,6 +561,7 @@ namespace Bank.API.Services
                 customerAccount.Balance -= transaction.Amount;
                 customerAccount.AvailableBalance -= transaction.Amount; // Skini i sa AvailableBalance za QR placanje
                 merchantAccount.Balance += transaction.Amount;
+                merchantAccount.AvailableBalance += transaction.Amount; //DODATO NAKNADNO
                 _accountRepo.UpdateAccount(customerAccount);
                 _accountRepo.UpdateAccount(merchantAccount);
 
