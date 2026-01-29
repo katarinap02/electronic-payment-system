@@ -59,6 +59,26 @@ services:
     networks:
       - app-network
 
+  #PosgreSql za paypal
+  postgres-paypal:
+    image: postgres:15-alpine
+    container_name: paypal-db
+    environment:
+      POSTGRES_DB: paypal
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: super
+    ports:
+      - "5437:5432"
+    volumes:
+      - postgres-paypal-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
   # WebShop API 
   webshop-api:
     build:
@@ -114,6 +134,29 @@ services:
       - BANK_HMAC_SECRET=supersecret123_psp_bank_shared_key
     ports:
       - "5002:80"
+    networks:
+      - app-network
+
+  #PayPal API
+  paypal-api:
+    build:
+      context: ./backend
+      dockerfile: PayPal/PayPal.API/Dockerfile
+    container_name: paypal-api
+    depends_on:
+      postgres-paypal:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres-paypal;Database=paypal;Username=postgres;Password=super;Port=5432
+      - ASPNETCORE_URLS=http://+:80
+      - PAYPAL_CLIENT_ID=YOUR_SANDBOX_CLIENT_ID_HERE
+      - PAYPAL_CLIENT_SECRET=YOUR_SANDBOX_SECRET_HERE
+      - PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
+      - ENCRYPTION_KEY=Y5OAJgofFqfgJ3bNWYb6kBddLKq21+GaOYNs3KTnZx0=
+      - LOG_LEVEL=Information
+    ports:
+      - "5003:80"
     networks:
       - app-network
 
@@ -178,6 +221,7 @@ volumes:
   postgres-webshop-data:
   postgres-bank-data:
   postgres-psp-data:
+  postgres-paypal-data:
 
 networks:
   app-network:
