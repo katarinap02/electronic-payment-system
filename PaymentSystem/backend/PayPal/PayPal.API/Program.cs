@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PayPal.API.Data;
+using PayPal.API.Repositories;
 using PayPal.API.Service;
 using System.Text.Json;
 
@@ -16,12 +17,13 @@ builder.Services.AddControllers()
 builder.Services.AddDbContext<PayPalDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// PCI DSS Zahtev 2 - Enkripcija
-//builder.Services.AddSingleton<EncryptionService>();
+builder.Services.AddScoped<PaypalTransactionRepository>();
+builder.Services.AddScoped<AuditLogRepository>();
 
-// PayPal integracija
-//builder.Services.AddSingleton<PayPalService>();
-//builder.Services.AddHttpClient();
+builder.Services.AddScoped<EncryptionService>();
+
+builder.Services.AddScoped<PayPalService>();
+builder.Services.AddHttpClient();
 
 // Seed Data Service
 //builder.Services.AddScoped<SeedDataService>();

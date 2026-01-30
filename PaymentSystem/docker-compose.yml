@@ -110,7 +110,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__BankDb=Host=postgres-bank;Database=bank;Username=postgres;Password=super;Port=5432
       - ASPNETCORE_URLS=http://+:80
-      - BANK_HMAC_SECRET=your_shared_secret_key_12345
+      - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
     ports:
       - "5001:80"
     networks:
@@ -131,7 +131,7 @@ services:
       - ASPNETCORE_URLS=http://+:80
       - BankApiUrl=http://bank-api:80
       - WebShopApiUrl=http://webshop-api:80
-      - BANK_HMAC_SECRET=supersecret123_psp_bank_shared_key
+      - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
     ports:
       - "5002:80"
     networks:
@@ -150,10 +150,10 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres-paypal;Database=paypal;Username=postgres;Password=super;Port=5432
       - ASPNETCORE_URLS=http://+:80
-      - PAYPAL_CLIENT_ID=YOUR_SANDBOX_CLIENT_ID_HERE
-      - PAYPAL_CLIENT_SECRET=YOUR_SANDBOX_SECRET_HERE
-      - PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
-      - ENCRYPTION_KEY=Y5OAJgofFqfgJ3bNWYb6kBddLKq21+GaOYNs3KTnZx0=
+      - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID}
+      - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET}
+      - PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com 
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - LOG_LEVEL=Information
     ports:
       - "5003:80"

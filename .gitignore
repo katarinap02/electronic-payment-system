@@ -1,3 +1,7 @@
+.env
+*.env
+.env.local
+.env.production
 # ===========================================
 # .NET Visual Studio specific
 # ===========================================
