@@ -244,6 +244,55 @@ public class PaymentService
         }
     }
 
+    private async Task<PayPalCreateOrderResponse> CallPayPalAsync(object requestData)
+    {
+        try
+        {
+            var payPalConfig = _configuration.GetSection("PayPalSettings");
+            var baseUrl = payPalConfig["ApiUrl"] ?? "http://localhost:5003";
+
+            var requestBody = System.Text.Json.JsonSerializer.Serialize(requestData);
+
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/paypal/create-order")
+            {
+                Content = new StringContent(requestBody, System.Text.Encoding.UTF8, "application/json")
+            };
+
+            httpRequest.Headers.Add("X-Request-ID", Guid.NewGuid().ToString()); 
+
+            var response = await _httpClient.SendAsync(httpRequest);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("PayPal API error: {StatusCode}, Response: {Content}",
+                    response.StatusCode, responseContent);
+                throw new HttpRequestException($"PayPal API returned {response.StatusCode}");
+            }
+
+            // Deserializuj odgovor (CamelCase kao kod banke)
+            var options = new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+            };
+
+            var payPalResponse = System.Text.Json.JsonSerializer.Deserialize<PayPalCreateOrderResponse>(responseContent, options);
+
+            if (payPalResponse == null)
+            {
+                throw new InvalidOperationException("PayPal response deserialization failed");
+            }
+
+            return payPalResponse;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling PayPal API");
+            throw;
+        }
+    }
+
     // DODAJ OVU KLASU
     public class BankPaymentResponse
     {
@@ -251,6 +300,13 @@ public class PaymentService
         public string PaymentUrl { get; set; }
         public DateTime ExpiresAt { get; set; }
         public string Message { get; set; }
+    }
+
+    public class PayPalCreateOrderResponse
+    {
+        public string PayPalOrderId { get; set; } = string.Empty;
+        public string ApprovalUrl { get; set; } = string.Empty;  
+        public string Status { get; set; } = string.Empty;
     }
 
     public class PaymentMethodSelectionResponse

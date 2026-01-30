@@ -191,7 +191,7 @@ services:
       - ./frontend/bank:/app
       - /app/node_modules
     environment:
-      - VITE_API_BASE_URL=
+      - VITE_API_BASE_URL=http://localhost:5001 #sta se ovde desilo...
     depends_on:
       - bank-api
     command: npm run dev -- --host 0.0.0.0

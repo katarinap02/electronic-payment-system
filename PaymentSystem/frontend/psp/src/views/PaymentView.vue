@@ -133,11 +133,11 @@ const selectPaymentMethod = async (paymentMethodId) => {
     // console.log('Bank Response:', bankResponse.data)
     
     // Step 3: Redirect to bank payment form
-    if (pspResponse.data.bankPaymentUrl) {
-      debugger
-      window.location.href = pspResponse.data.bankPaymentUrl
+    const redirectUrl = pspResponse.data.bankPaymentUrl || pspResponse.data.approvalUrl || pspResponse.data.redirectUrl
+    if (redirectUrl) {
+      window.location.href = redirectUrl
     } else {
-      throw new Error('Bank payment URL not received')
+      throw new Error('Payment URL not received')
     }
 
   } catch (err) {
@@ -149,18 +149,23 @@ const selectPaymentMethod = async (paymentMethodId) => {
 }
 
 onMounted(async () => {
-  // Check if returning from bank with payment status
+  // Check if returning from any payment method (bank or PayPal)
   const status = route.query.status
+  
+  // Bank params
   const bankPaymentId = route.query.bankPaymentId
   
+  // PayPal params  
+  const payPalToken = route.query.token        // PayPal Order ID
+  const payPalPayerId = route.query.PayerID    // PayPal Payer ID
+  
+  // If returning from Bank
   if (status && bankPaymentId) {
-    // User is returning from bank, notify PSP backend and redirect to WebShop
     try {
       const response = await axios.get(`http://localhost:5002/api/payments/${route.params.id}/bank-callback`, {
         params: { status, paymentId: bankPaymentId }
       })
       
-      // Backend returns redirect URL to WebShop
       if (response.data && response.data.redirectUrl) {
         window.location.href = response.data.redirectUrl
         return
@@ -171,8 +176,27 @@ onMounted(async () => {
     }
   }
   
+  // If returning from PayPal (success)
+  else if (payPalToken && payPalPayerId) {
+    try {
+      const response = await axios.get(`http://localhost:5002/api/payments/${route.params.id}/paypal-callback`, {
+        params: { token: payPalToken, payerId: payPalPayerId }
+      })
+      
+      if (response.data && response.data.redirectUrl) {
+        window.location.href = response.data.redirectUrl
+        return
+      }
+    } catch (err) {
+      console.error('Failed to process PayPal callback:', err)
+      error.value = 'Failed to process PayPal payment'
+    }
+  }
+  
   // Normal payment page load
-  loadPaymentDetails()
+  else {
+    loadPaymentDetails()
+  }
 })
 </script>
 

@@ -81,7 +81,16 @@ public static class SeedData
                     Description = "Plaćanje skeniranjem IPS QR koda",
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow
-                }
+                },
+            new PaymentMethod
+            {
+                Name = "PayPal",
+                Code = "PAYPAL",  
+                Type = PaymentMethodType.PayPal,  
+                Description = "Plaćanje putem PayPal naloga",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            }
             };
 
             context.PaymentMethods.AddRange(paymentMethods);
