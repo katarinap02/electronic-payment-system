@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: webshop
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: super
+      POSTGRES_PASSWORD: ${POSTGRES_WEBSHOP_PASSWORD}
     ports:
       - "5434:5432"
     volumes:
@@ -26,7 +26,7 @@ services:
     environment:
       POSTGRES_DB: bank
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: super
+      POSTGRES_PASSWORD: ${POSTGRES_BANK_PASSWORD}
     ports:
       - "5435:5432"
     volumes:
@@ -46,7 +46,7 @@ services:
     environment:
       POSTGRES_DB: psp
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: super
+      POSTGRES_PASSWORD: ${POSTGRES_PSP_PASSWORD}
     ports:
       - "5436:5432"
     volumes:
@@ -66,7 +66,7 @@ services:
     environment:
       POSTGRES_DB: paypal
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: super
+      POSTGRES_PASSWORD:  ${POSTGRES_PAYPAL_PASSWORD}
     ports:
       - "5437:5432"
     volumes:
@@ -90,8 +90,11 @@ services:
         condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__WebShopDb=Host=postgres-webshop;Database=webshop;Username=postgres;Password=super;Port=5432
+      - ConnectionStrings__WebShopDb=Host=postgres-webshop;Database=webshop;Username=postgres;Password=${POSTGRES_WEBSHOP_PASSWORD};Port=5432
       - ASPNETCORE_URLS=http://+:80
+      - Jwt__SecretKey=${WEBSHOP_JWT_SECRET_KEY}        
+      - PSP__MerchantId=${WEBSHOP_MERCHANT_ID}          
+      - PSP__MerchantPassword=${WEBSHOP_MERCHANT_PASSWORD}
     ports:
       - "5000:80"
     networks:
@@ -108,9 +111,10 @@ services:
         condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__BankDb=Host=postgres-bank;Database=bank;Username=postgres;Password=super;Port=5432
+      - ConnectionStrings__BankDb=Host=postgres-bank;Database=bank;Username=postgres;Password=${POSTGRES_BANK_PASSWORD};Port=5432
       - ASPNETCORE_URLS=http://+:80
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
+      - HmacSettings__SecretKey=${BANK_HMAC_SECRET}
     ports:
       - "5001:80"
     networks:
@@ -127,11 +131,14 @@ services:
         condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=postgres-psp;Database=psp;Username=postgres;Password=super;Port=5432
+      - ConnectionStrings__DefaultConnection=Host=postgres-psp;Database=psp;Username=postgres;Password=${POSTGRES_PSP_PASSWORD};Port=5432
       - ASPNETCORE_URLS=http://+:80
       - BankApiUrl=http://bank-api:80
       - WebShopApiUrl=http://webshop-api:80
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
+      - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
+      - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}
+      - Jwt__SecretKey=${JWT_SECRET_KEY}
     ports:
       - "5002:80"
     networks:
@@ -148,7 +155,7 @@ services:
         condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=postgres-paypal;Database=paypal;Username=postgres;Password=super;Port=5432
+      - ConnectionStrings__DefaultConnection=Host=postgres-paypal;Database=paypal;Username=postgres;Password=${POSTGRES_PAYPAL_PASSWORD};Port=5432
       - ASPNETCORE_URLS=http://+:80
       - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID}
       - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET}
