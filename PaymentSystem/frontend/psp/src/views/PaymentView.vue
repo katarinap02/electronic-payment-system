@@ -5,7 +5,7 @@
     <div v-else-if="error" class="error-state">
       <h2>⚠️ Error</h2>
       <p>{{ error }}</p>
-      <button @click="$router.push('/')" class="btn-back">Go Back</button>
+      <button @click="goBackToShop" class="btn-back">Go Back</button>
     </div>
 
     <div v-else-if="payment" class="payment-container">
@@ -223,6 +223,9 @@ onMounted(async () => {
     loading.value = false
   }
 })
+const goBackToShop = () => {
+  window.location.href = 'http://localhost:5173/vehicles'
+}
 </script>
 
 <style scoped>
