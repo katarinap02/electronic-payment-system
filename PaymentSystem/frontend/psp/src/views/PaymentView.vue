@@ -87,6 +87,13 @@ const loadPaymentDetails = async () => {
 
   try {
     const token = route.query.token
+
+    if (!token || !/^[a-f0-9]{32}$/i.test(token)) {
+      error.value = 'Invalid or missing access token'
+      loading.value = false
+      return
+    }
+
     const response = await axios.get(`http://localhost:5002/api/payments/${route.params.id}?token=${token}`)
     console.log('Payment details loaded:', response.data)
     payment.value = response.data
@@ -149,17 +156,17 @@ const selectPaymentMethod = async (paymentMethodId) => {
 }
 
 onMounted(async () => {
-  // Check if returning from any payment method (bank or PayPal)
-  const status = route.query.status
+  const urlToken = route.query.token // Može biti PSP token (32 hex) ili PayPal token (PAYID-...)
+  const isPspToken = /^[a-f0-9]{32}$/i.test(urlToken || '')
   
   // Bank params
+  const status = route.query.status
   const bankPaymentId = route.query.bankPaymentId
   
   // PayPal params  
-  const payPalToken = route.query.token        // PayPal Order ID
-  const payPalPayerId = route.query.PayerID    // PayPal Payer ID
+  const payPalPayerId = route.query.PayerID
   
-  // If returning from Bank
+  // 1. Bank callback (vratio se sa banke)
   if (status && bankPaymentId) {
     try {
       const response = await axios.get(`http://localhost:5002/api/payments/${route.params.id}/bank-callback`, {
@@ -176,11 +183,11 @@ onMounted(async () => {
     }
   }
   
-  // If returning from PayPal (success)
-  else if (payPalToken && payPalPayerId) {
+  // 2. PayPal Success (nije PSP token [PAYID-...] + ima PayerID)
+  else if (!isPspToken && payPalPayerId) {
     try {
       const response = await axios.get(`http://localhost:5002/api/payments/${route.params.id}/paypal-callback`, {
-        params: { token: payPalToken, payerId: payPalPayerId }
+        params: { token: urlToken, payerId: payPalPayerId }
       })
       
       if (response.data && response.data.redirectUrl) {
@@ -192,10 +199,28 @@ onMounted(async () => {
       error.value = 'Failed to process PayPal payment'
     }
   }
+
+  // 3. PayPal Cancel (nije PSP token + nema PayerID)
+  else if (!isPspToken && urlToken && !payPalPayerId) {
+    error.value = 'Payment was cancelled by user'
+    loading.value = false
+    
+    try {
+      await axios.post(`http://localhost:5002/api/payments/${route.params.id}/cancel`)
+    } catch (err) {
+      console.error('Failed to cancel payment:', err)
+    }
+  }
   
-  // Normal payment page load
+  // 4. Normalno učitavanje (ima validan PSP token - 32 hex)
+  else if (isPspToken) {
+    await loadPaymentDetails()
+  }
+  
+  // 5. Nema tokena ili nešto ne valja
   else {
-    loadPaymentDetails()
+    error.value = 'Invalid or missing payment link'
+    loading.value = false
   }
 })
 </script>

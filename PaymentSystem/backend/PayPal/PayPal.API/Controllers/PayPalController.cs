@@ -41,42 +41,28 @@ namespace PayPal.API.Controllers
         }
 
         // Callback sa PayPal-a kada korisnik plati (SuccessUrl)
-        [HttpGet("capture")]
-        public async Task<ActionResult> CaptureOrder(
-        [FromQuery] string token,        // PayPal Order ID
-        [FromQuery] string pspTransactionId,  // Tvoj PSP ID
-        [FromQuery] string? PayerID)     // PayPal ID korisnika neobavezno
+        [HttpPost("capture-order")]
+        public async Task<ActionResult> CaptureOrder([FromBody] CaptureOrderRequest request)
         {
             try
             {
-                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "callback";
+                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "psp-backend";
+                var success = await _payPalService.CaptureOrderAsync(
+                    request.PayPalOrderId,
+                    request.PspTransactionId,
+                    ipAddress
+                );
 
-                _logger.LogInformation("Capture callback received for PSP: {PspId}", pspTransactionId);
-
-                // Pozovi PayPal da potvrdiš da je plaćeno
-                var success = await _payPalService.CaptureOrderAsync(token, pspTransactionId, ipAddress);
-
-                if (success)
-                {
-                    // Vrati na PSP sa statusom success
-                    var redirectUrl = $"http://localhost:5174/payment/{pspTransactionId}?status=success&method=paypal";
-                    return Redirect(redirectUrl);
-                }
-                else
-                {
-                    // Vrati na PSP sa statusom failed
-                    var redirectUrl = $"http://localhost:5174/payment/{pspTransactionId}?status=failed&method=paypal";
-                    return Redirect(redirectUrl);
-                }
+                return Ok(new { success, status = success ? "COMPLETED" : "FAILED" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in CaptureOrder callback");
-                // I u slučaju greške redirectuj na failed
-                var redirectUrl = $"http://localhost:5174/payment/{pspTransactionId}?status=error&method=paypal";
-                return Redirect(redirectUrl);
+                _logger.LogError(ex, "Error capturing order");
+                return BadRequest(new { error = ex.Message });
             }
         }
+
+        public record CaptureOrderRequest(string PayPalOrderId, string PspTransactionId);
 
         //provera statusa transakcije ako bude trebala
         [HttpGet("transaction/{pspTransactionId}")]

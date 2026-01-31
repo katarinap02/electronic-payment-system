@@ -4,6 +4,7 @@ using PSP.Application.DTOs.Payments;
 using PSP.Application.Interfaces.Repositories;
 using PSP.Domain.Entities;
 using PSP.Domain.Enums;
+using System.Net.Http.Json;
 
 namespace PSP.Infrastructure.Services;
 
@@ -134,55 +135,93 @@ public class PaymentService
         // Prepare data for frontend to call Bank API
         var stan = $"PSP-{payment.Id}-{DateTime.UtcNow.Ticks}";
         var pspBackendUrl = _configuration["PSPBackendUrl"] ?? "http://localhost:5002";
+        var pspFrontendUrl = _configuration["PSPFrontendUrl"] ?? "http://localhost:5174";
 
         //BACK POZIVA BACK ZBOG SIGURNIH KLJUCEVA
-
-
-        try
+        if (paymentMethod.Code == "PAYPAL")
         {
-            // Pripremi podatke za banku
-            var bankRequestData = new
+            try
             {
-                MerchantId = webShop.MerchantId,
-                Amount = payment.Amount,
-                Currency = payment.Currency.ToString(),
-                Stan = stan,
-                PspTimestamp = DateTime.UtcNow,
-                PaymentMethodCode = paymentMethod.Code, // CREDIT_CARD ili IPS_SCAN
-                SuccessUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=success",
-                FailedUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=failed",
-                ErrorUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=error"
-            };
+                var payPalRequest = new
+                {
+                    PspTransactionId = payment.Id.ToString(),
+                    Amount = payment.Amount,
+                    Currency = payment.Currency.ToString(),
+                    MerchantId = webShop.MerchantId,
+                    ReturnUrl = $"{pspFrontendUrl}/payment/{payment.Id}", // PayPal će dodati ?token=xxx&PayerID=yyy
+                    CancelUrl = $"{pspFrontendUrl}/payment/{payment.Id}?status=cancelled"
+                };
 
-            // Pozovi banku sa HMAC-om
-            var bankResponse = await CallBankWithHmacAsync(bankRequestData);
+                var payPalResponse = await CallPayPalAsync(payPalRequest);
 
-            // Sa?uvaj bank podatke
-            payment.PaymentUrl = bankResponse.PaymentUrl;
-            await _paymentRepository.UpdateAsync(payment);
+                payment.PaymentUrl = payPalResponse.ApprovalUrl;
+                await _paymentRepository.UpdateAsync(payment);
 
-            // Vrati bank payment_url frontendu
-            return new PaymentMethodSelectionResponse
+                return new PaymentMethodSelectionResponse
+                {
+                    MerchantId = webShop.MerchantId,
+                    Amount = payment.Amount,
+                    Currency = payment.Currency.ToString(),
+                    ApprovalUrl = payPalResponse.ApprovalUrl,  // Frontend očekuje ovo polje
+                    PayPalOrderId = payPalResponse.PayPalOrderId
+                };
+            }
+            catch (Exception ex)
             {
-                MerchantId = webShop.MerchantId,
-                Amount = payment.Amount,
-                Currency = payment.Currency.ToString(),
-                Stan = stan,
-                PspTimestamp = DateTime.UtcNow,
-                SuccessUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=success",
-                FailedUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=failed",
-                ErrorUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=error",
-
-                BankPaymentId = bankResponse.PaymentId,
-                BankPaymentUrl = bankResponse.PaymentUrl  // OVO FRONTEND KORISTI!
-            };
+                payment.Status = PaymentStatus.Failed;
+                await _paymentRepository.UpdateAsync(payment);
+                throw new InvalidOperationException($"Failed to initiate PayPal payment: {ex.Message}");
+            }
         }
-        catch (Exception ex)
+        else
         {
-            // Rollback ako banka odbije
-            payment.Status = PaymentStatus.Failed;
-            await _paymentRepository.UpdateAsync(payment);
-            throw new InvalidOperationException($"Failed to initiate payment with bank: {ex.Message}");
+
+            try
+            {
+                // Pripremi podatke za banku
+                var bankRequestData = new
+                {
+                    MerchantId = webShop.MerchantId,
+                    Amount = payment.Amount,
+                    Currency = payment.Currency.ToString(),
+                    Stan = stan,
+                    PspTimestamp = DateTime.UtcNow,
+                    PaymentMethodCode = paymentMethod.Code, // CREDIT_CARD ili IPS_SCAN
+                    SuccessUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=success",
+                    FailedUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=failed",
+                    ErrorUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=error"
+                };
+
+                // Pozovi banku sa HMAC-om
+                var bankResponse = await CallBankWithHmacAsync(bankRequestData);
+
+                // Sa?uvaj bank podatke
+                payment.PaymentUrl = bankResponse.PaymentUrl;
+                await _paymentRepository.UpdateAsync(payment);
+
+                // Vrati bank payment_url frontendu
+                return new PaymentMethodSelectionResponse
+                {
+                    MerchantId = webShop.MerchantId,
+                    Amount = payment.Amount,
+                    Currency = payment.Currency.ToString(),
+                    Stan = stan,
+                    PspTimestamp = DateTime.UtcNow,
+                    SuccessUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=success",
+                    FailedUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=failed",
+                    ErrorUrl = $"{pspBackendUrl}/api/payments/{payment.Id}/bank-callback?status=error",
+
+                    BankPaymentId = bankResponse.PaymentId,
+                    BankPaymentUrl = bankResponse.PaymentUrl  // OVO FRONTEND KORISTI!
+                };
+            }
+            catch (Exception ex)
+            {
+                // Rollback ako banka odbije
+                payment.Status = PaymentStatus.Failed;
+                await _paymentRepository.UpdateAsync(payment);
+                throw new InvalidOperationException($"Failed to initiate payment with bank: {ex.Message}");
+            }
         }
     }
 
@@ -321,6 +360,8 @@ public class PaymentService
         public string ErrorUrl { get; set; } = string.Empty;
         public string BankPaymentId { get; set; } = string.Empty;
         public string BankPaymentUrl { get; set; } = string.Empty;
+        public string ApprovalUrl { get; set; } = string.Empty;
+        public string PayPalOrderId { get; set; } = string.Empty;
     }
 
     public async Task CancelPaymentAsync(int paymentId)
@@ -407,6 +448,55 @@ public class PaymentService
         }
 
         return redirectUrl;
+    }
+
+    public async Task<string> HandlePayPalCallbackAsync(int paymentId, string payPalOrderId, string payerId)
+    {
+        var payment = await _paymentRepository.GetByIdAsync(paymentId);
+        if (payment == null) throw new InvalidOperationException("Payment not found");
+
+        var webShop = await _webShopRepository.GetByIdAsync(payment.WebShopId);
+        if (webShop == null) throw new InvalidOperationException("WebShop not found");
+
+        // Pozovi PayPal mikroservis da capture-uje
+        var payPalConfig = _configuration.GetSection("PayPalSettings");
+        var baseUrl = payPalConfig["ApiUrl"] ?? "http://localhost:5003";
+
+        var captureRequest = new
+        {
+            PayPalOrderId = payPalOrderId,
+            PspTransactionId = payment.Id.ToString() 
+        };
+
+        var response = await _httpClient.PostAsJsonAsync($"{baseUrl}/api/paypal/capture-order", captureRequest);
+        var result = await response.Content.ReadFromJsonAsync<PayPalCaptureResult>();
+
+        // Ažuriraj status
+        if (result?.Success == true)
+        {
+            payment.Status = PaymentStatus.Success;
+        }
+        else
+        {
+            payment.Status = PaymentStatus.Failed;
+        }
+        await _paymentRepository.UpdateAsync(payment);
+
+        // Generiši redirect URL ka merchantu
+        if (payment.Status == PaymentStatus.Success)
+        {
+            return $"{webShop.SuccessUrl}?paymentId={paymentId}&orderId={payment.MerchantOrderId}&amount={payment.Amount}&currency={payment.Currency}&paymentMethod=PAYPAL";
+        }
+        else
+        {
+            return $"{webShop.FailedUrl}?paymentId={paymentId}&orderId={payment.MerchantOrderId}";
+        }
+    }
+
+    public class PayPalCaptureResult
+    {
+        public bool Success { get; set; }
+        public string Status { get; set; }
     }
 }
 

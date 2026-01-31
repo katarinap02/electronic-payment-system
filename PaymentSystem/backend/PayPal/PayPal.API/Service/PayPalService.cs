@@ -166,6 +166,7 @@ namespace PayPal.API.Service
                 //  Poziva PayPal API da potvrdi plaćanje
                 var request = new OrdersCaptureRequest(payPalOrderId);
                 request.Headers.Add("PayPal-Request-Id", Guid.NewGuid().ToString());
+                request.RequestBody(new OrderActionRequest());
 
                 // Ako korisnik već platio, PayPal će vratiti "UNPROCESSABLE_ENTITY" i poruku da je već captured
 

@@ -137,6 +137,20 @@ public class PaymentsController : ControllerBase
             return StatusCode(500, new { message = "An error occurred", error = ex.Message });
         }
     }
+
+    [HttpGet("{id}/paypal-callback")]
+    public async Task<ActionResult> HandlePayPalCallback(int id, [FromQuery] string token, [FromQuery] string payerId)
+    {
+        try
+        {
+            var redirectUrl = await _paymentService.HandlePayPalCallbackAsync(id, token, payerId);
+            return Ok(new { redirectUrl });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Error processing PayPal callback", error = ex.Message });
+        }
+    }
 }
 
 public record SelectPaymentMethodRequest(int PaymentMethodId);
