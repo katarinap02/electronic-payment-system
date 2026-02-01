@@ -54,7 +54,7 @@ namespace PayPal.API.Service
                     {
                         PayPalOrderId = decryptedOrderId,
                         Status = existingTx.Status.ToString(),
-                        // TODO: Vratiti approval URL iz baze ili generisati ponovo?
+                        // Vratiti approval URL iz baze ili generisati ponovo?
                         ApprovalUrl = "" // Ovo ćemo doraditi kasnije
                     };
                 }
@@ -121,7 +121,7 @@ namespace PayPal.API.Service
                     transactionId: request.PspTransactionId,
                     ipAddress: ipAddress,
                     result: "SUCCESS",
-                    details: $"PayPal OrderId: {order.Id}, Amount: {request.Amount} {request.Currency}"
+                    details: $"PayPal OrderId: {encryptedOrderId}, Amount: {request.Amount} {request.Currency}"
                 );
 
                 // Pronađi approval URL (gde korisnik treba da ode da plati)
