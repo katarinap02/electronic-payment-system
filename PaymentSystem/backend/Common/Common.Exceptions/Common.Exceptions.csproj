@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\WebShop\WebShop.API\WebShop.API.csproj" />
+  </ItemGroup>
+
 </Project>

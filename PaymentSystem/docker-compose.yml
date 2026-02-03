@@ -95,6 +95,8 @@ services:
       - Jwt__SecretKey=${WEBSHOP_JWT_SECRET_KEY}        
       - PSP__MerchantId=${WEBSHOP_MERCHANT_ID}          
       - PSP__MerchantPassword=${WEBSHOP_MERCHANT_PASSWORD}
+      - Seq__ServerUrl=http://seq:80
+      - Seq__ApiKey=${SEQ_API_KEY}
     ports:
       - "5000:80"
     networks:
@@ -115,6 +117,8 @@ services:
       - ASPNETCORE_URLS=http://+:80
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
       - HmacSettings__SecretKey=${BANK_HMAC_SECRET}
+      - Seq__ServerUrl=http://seq:80
+      - Seq__ApiKey=${SEQ_API_KEY}
     ports:
       - "5001:80"
     networks:
@@ -139,6 +143,8 @@ services:
       - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
       - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}
       - Jwt__SecretKey=${JWT_SECRET_KEY}
+      - Seq__ServerUrl=http://seq:80
+      - Seq__ApiKey=${SEQ_API_KEY}
     ports:
       - "5002:80"
     networks:
@@ -162,6 +168,8 @@ services:
       - PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com 
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - LOG_LEVEL=Information
+      - Seq__ServerUrl=http://seq:80
+      - Seq__ApiKey=${SEQ_API_KEY}
     ports:
       - "5003:80"
     networks:
@@ -224,11 +232,32 @@ services:
     networks:
       - app-network
 
+  #Seq za logove
+  seq:
+    image: datalust/seq:latest
+    container_name: seq-server
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_ADMINPASSWORD=${SEQ_ADMIN_PASSWORD}
+      - SEQ_RETENTIONPOLICY_DEFAULT=365d
+    ports:
+      - "5341:80"      # UI dostupan na localhost:5341
+    volumes:
+      - seq-data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 volumes:
   postgres-webshop-data:
   postgres-bank-data:
   postgres-psp-data:
   postgres-paypal-data:
+  seq-data:
 
 networks:
   app-network:

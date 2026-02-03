@@ -1,7 +1,11 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
 using PSP.Infrastructure.Extensions;
+using PSP.Infrastructure.Middleware;
+using Serilog;
+using Serilog.Events;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,6 +45,35 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
+//Serilog
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+    .MinimumLevel.Override("System", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .Enrich.WithMachineName()
+    .Enrich.WithProcessId()
+    .Enrich.WithThreadId()
+    .Enrich.WithProperty("ServiceName", "PSP.API") 
+    .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{ServiceName}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.Seq(
+        serverUrl: builder.Configuration["Seq:ServerUrl"] ?? "http://seq:80",
+        apiKey: builder.Configuration["Seq:ApiKey"],
+        restrictedToMinimumLevel: LogEventLevel.Information)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+        | ForwardedHeaders.XForwardedProto;
+    // Dozvoli sve proxy-je u Docker mreži
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+builder.Services.AddHttpContextAccessor();
+
 builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
@@ -64,6 +97,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowFrontend");
+app.UseForwardedHeaders();
+app.UseSerilogRequestLogging();
+app.UseAuditLogging();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

@@ -1,7 +1,11 @@
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using PayPal.API.Data;
+using PayPal.API.Middleware;
 using PayPal.API.Repositories;
 using PayPal.API.Service;
+using Serilog;
+using Serilog.Events;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +21,34 @@ builder.Services.AddControllers()
 builder.Services.AddDbContext<PayPalDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// KONFIGURIŠE SERILOG
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+    .MinimumLevel.Override("System", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .Enrich.WithMachineName()
+    .Enrich.WithProcessId()
+    .Enrich.WithThreadId()
+    .Enrich.WithProperty("ServiceName", "PayPal.API")
+    .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{ServiceName}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.Seq(
+        serverUrl: builder.Configuration["Seq:ServerUrl"] ?? "http://seq:80",
+        apiKey: builder.Configuration["Seq:ApiKey"],
+        restrictedToMinimumLevel: LogEventLevel.Information)
+    .CreateLogger();
+builder.Host.UseSerilog();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+        | ForwardedHeaders.XForwardedProto;
+    // Dozvoli sve proxy-je u Docker mreži
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+builder.Services.AddHttpContextAccessor();
+
 builder.Services.AddScoped<PaypalTransactionRepository>();
 builder.Services.AddScoped<AuditLogRepository>();
 
@@ -30,6 +62,10 @@ builder.Services.AddHttpClient();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+
+
+builder.Host.UseSerilog();
 
 // CORS (dozvoli PSP frontendu da komunicira)
 builder.Services.AddCors(options =>
@@ -68,27 +104,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// SEED TEST DATA 
-//using (var scope = app.Services.CreateScope())
-//{
-//    var seedService = scope.ServiceProvider.GetRequiredService<SeedDataService>();
-//    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-
-//    try
-//    {
-//        seedService.InitializeTestData();
-//        logger.LogInformation("PayPal seed data initialized successfully!");
-//    }
-//    catch (Exception ex)
-//    {
-//        logger.LogError(ex, "Error seeding PayPal test data");
-//    }
-//}
-
-//app.UseMiddleware<AuditMiddleware>();
-
 app.UseRouting();
 app.UseCors("AllowPSP");
+app.UseForwardedHeaders();
+app.UseSerilogRequestLogging();
+app.UseAuditLogging();
 
 app.UseAuthorization();
 app.MapControllers();

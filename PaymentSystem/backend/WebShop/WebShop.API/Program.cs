@@ -1,12 +1,44 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
+using Serilog.Events;
 using System.Text;
 using WebShop.API.Data;
+using WebShop.API.Middleware;
 using WebShop.API.Repositories;
 using WebShop.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+    .MinimumLevel.Override("System", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .Enrich.WithMachineName()
+    .Enrich.WithProcessId()
+    .Enrich.WithThreadId()
+    .Enrich.WithProperty("ServiceName", "Webshop.API")
+    .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{ServiceName}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.Seq(
+        serverUrl: builder.Configuration["Seq:ServerUrl"] ?? "http://seq:80",
+        apiKey: builder.Configuration["Seq:ApiKey"],
+        restrictedToMinimumLevel: LogEventLevel.Information)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+        | ForwardedHeaders.XForwardedProto;
+    // Dozvoli sve proxy-je u Docker mreži
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+builder.Services.AddHttpContextAccessor();
 
 // User services
 builder.Services.AddScoped<UserRepository>();
@@ -72,44 +104,28 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    var logger = services.GetRequiredService<ILogger<Program>>();
     
     try
     {
         var dbContext = services.GetRequiredService<AppDbContext>();
         var passwordService = services.GetRequiredService<PasswordService>();
         
-        logger.LogInformation("Applying database migrations...");
         dbContext.Database.Migrate();
-        logger.LogInformation("Database migrations applied successfully.");
         
-        logger.LogInformation("Ensuring Rentals table exists...");
         DatabaseInitializer.Initialize(dbContext);
-        logger.LogInformation("Database initialization completed.");
 
-        logger.LogInformation("Seeding users...");
         UserSeedData.SeedAdminUser(dbContext, passwordService);
-        logger.LogInformation("Users seeded successfully.");
 
-        logger.LogInformation("Seeding vehicles...");
         VehicleSeedData.SeedVehicles(dbContext);
-        logger.LogInformation("Vehicles seeded successfully.");
         
-        logger.LogInformation("Seeding insurance packages...");
         InsurancePackageSeedData.SeedInsurancePackages(dbContext);
-        logger.LogInformation("Insurance packages seeded successfully.");
         
-        logger.LogInformation("Seeding additional services...");
         AdditionalServiceSeedData.SeedAdditionalServices(dbContext);
-        logger.LogInformation("Additional services seeded successfully.");
 
-        logger.LogInformation("Seeding rentals...");
         RentalSeedData.SeedRentals(dbContext);
-        logger.LogInformation("Rentals seeded successfully.");
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
         throw;
     }
 }
@@ -124,11 +140,12 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowFrontend");
 
 app.UseRouting();
-
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
-
+app.UseForwardedHeaders();
+app.UseSerilogRequestLogging();
+app.UseAuditLogging();
 app.MapControllers();
 
 app.Run();
