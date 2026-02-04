@@ -208,7 +208,7 @@ namespace Bank.API.Services
                 //Tokenizacija kartice (PCI DSS compliance)
                 var cardToken = _tokenRepo.CreateToken(card.Id, transaction.Id);
 
-                // 6. Pronadi customer account (po�to je sve u istoj banci)
+                // 6. Pronadi customer account (posto je sve u istoj banci)
                 // lookup po PAN-u ili customer ID-u
                 var customerAccount = _accountRepo.FindCustomerAccount(card.CustomerId);
                 if (customerAccount == null)

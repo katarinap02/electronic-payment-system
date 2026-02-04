@@ -43,6 +43,7 @@ namespace PayPal.API.Service
             {
                 // sprečavanje duplog plaćanja 
                 // Ako već postoji transakcija sa istim PSP ID-jem, vrati postojeću
+                var merchantId =  request.MerchantId.ToLowerInvariant() + "@example.com";
                 var existingTx = await _transactionRepo.GetByPspTransactionIdAsync(request.PspTransactionId);
                 if (existingTx != null && existingTx.Status != PaypalTransaction.PaypalStatus.FAILED)
                 {
@@ -76,7 +77,11 @@ namespace PayPal.API.Service
                             CurrencyCode = request.Currency,
                             Value = request.Amount.ToString("F2")
                         },
-                        ReferenceId = request.PspTransactionId // Veza sa našim sistemom
+                        ReferenceId = request.PspTransactionId, // Veza sa našim sistemom
+                        Payee = new Payee
+                            {
+                                Email = merchantId,
+                            }
                     }
                 },
                     ApplicationContext = new ApplicationContext

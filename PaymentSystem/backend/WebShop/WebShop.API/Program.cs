@@ -5,10 +5,25 @@ using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Serilog.Events;
 using System.Text;
+using System.Text.Json;
 using WebShop.API.Data;
 using WebShop.API.Middleware;
 using WebShop.API.Repositories;
 using WebShop.API.Services;
+
+//PROVERA DA LI JE VREME SINHRONIZOVANO
+string timeSyncStatus;
+try
+{
+    using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
+    var json = client.GetStringAsync("http://worldtimeapi.org/api/timezone/UTC").Result;
+    var apiTime = DateTimeOffset.FromUnixTimeSeconds(JsonDocument.Parse(json).RootElement.GetProperty("unixtime").GetInt64()).UtcDateTime;
+    timeSyncStatus = Math.Abs((DateTime.UtcNow - apiTime).TotalSeconds) < 60 ? "SYNC_OK" : "SYNC_FAIL";
+}
+catch
+{
+    timeSyncStatus = "SYNC_HOST_NTP";
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +36,7 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.WithProcessId()
     .Enrich.WithThreadId()
     .Enrich.WithProperty("ServiceName", "Webshop.API")
+    .Enrich.WithProperty("TimeSyncStatus", timeSyncStatus)
     .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{ServiceName}] {Message:lj}{NewLine}{Exception}")
     .WriteTo.Seq(
