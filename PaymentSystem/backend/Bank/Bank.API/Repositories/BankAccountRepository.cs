@@ -9,13 +9,10 @@ namespace Bank.API.Repositories
     public class BankAccountRepository
     {
         private readonly AppDbContext _context;
-        private readonly ILogger<AutoCaptureBackgroundService> _logger;
 
-        public BankAccountRepository(AppDbContext context,
-        ILogger<AutoCaptureBackgroundService> logger)
+        public BankAccountRepository(AppDbContext context)
         {
             _context = context;
-            _logger = logger;
         }
 
         public BankAccount? GetByAccountNumber(string accountNumber)
@@ -85,7 +82,7 @@ namespace Bank.API.Repositories
 
                 if (customer == null || merchant == null)
                 {
-                    _logger.LogWarning($"❌ Accounts not found. Customer: {customerAccountId}, Merchant: {merchantAccountId}");
+                  
                     return false;
                 }
 
@@ -94,8 +91,7 @@ namespace Bank.API.Repositories
                 // Proveri da li kupac ima dovoljno rezervisanih sredstava
                 if (customer.ReservedBalance < amountInEur)
                 {
-                    _logger.LogWarning($"❌ Insufficient reserved balance. " +
-                                      $"Customer {customerAccountId} has {customer.ReservedBalance}, needs {amountInEur}");
+                   
                     return false;
                 }
 
@@ -112,7 +108,6 @@ namespace Bank.API.Repositories
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"🔥 Error in FinalizeCapture");
                 transaction.Rollback();
                 throw;
             }

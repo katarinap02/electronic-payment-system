@@ -10,16 +10,14 @@ namespace Bank.API.Services
     {
         private readonly CardRepository _cardRepo;
         private readonly CardTokenRepository _tokenRepo;
-        private readonly ILogger<CardService> _logger;
 
         public CardService(
             CardRepository cardRepo,
-            CardTokenRepository tokenRepo,
-            ILogger<CardService> logger)
+            CardTokenRepository tokenRepo)
         {
             _cardRepo = cardRepo;
             _tokenRepo = tokenRepo;
-            _logger = logger;
+
         }
 
         //Tokenizacija PAN-a 
@@ -43,13 +41,11 @@ namespace Bank.API.Services
                     .Replace("=", "")
                     .Substring(0, 16);
 
-                _logger.LogInformation($"PAN tokenized for merchant: {merchantId}, Masked: {maskedPan}");
-
                 return token;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error tokenizing PAN for merchant: {merchantId}");
+
                 throw;
             }
         }
@@ -106,13 +102,11 @@ namespace Bank.API.Services
                 result.MaskedPan = MaskPan(cardInfo.CardNumber);
                 result.IsValid = true;
 
-                _logger.LogInformation($"Card validated: {result.MaskedPan}");
 
                 return result;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error validating card");
                 throw;
             }
         }

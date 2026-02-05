@@ -11,16 +11,13 @@ namespace Bank.API.Controllers
     {
         private readonly PaymentService _paymentService;
         private readonly NbsQrCodeService _qrCodeService;
-        private readonly ILogger<PaymentController> _logger;
 
         public PaymentController(
             PaymentService paymentService, 
-            NbsQrCodeService qrCodeService,
-            ILogger<PaymentController> logger)
+            NbsQrCodeService qrCodeService)
         {
             _paymentService = paymentService;
             _qrCodeService = qrCodeService;
-            _logger = logger;
         }
         [HttpPost("initiate")]
         [AllowAnonymous] //trebace posle neka autorizacija
@@ -36,22 +33,19 @@ namespace Bank.API.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                _logger.LogWarning($"Unauthorized PSP request: {ex.Message}");
                 return Unauthorized(new { error = "Invalid PSP credentials" });
             }
             catch (ArgumentException ex)
             {
-                _logger.LogWarning($"Invalid payment request: {ex.Message}");
                 return BadRequest(new { error = ex.Message });
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogWarning($"Payment processing error: {ex.Message}");
                 return Conflict(new { error = ex.Message }); // 409 za duplicate
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error initiating payment");
+
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
@@ -70,17 +64,14 @@ namespace Bank.API.Controllers
             }
             catch (ArgumentException ex)
             {
-                _logger.LogWarning($"Invalid payment ID: {paymentId}, Error: {ex.Message}");
                 return NotFound(new { error = "Payment not found" });
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogWarning($"Expired payment form: {paymentId}, Error: {ex.Message}");
                 return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error getting payment form: {paymentId}");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
@@ -99,22 +90,18 @@ namespace Bank.API.Controllers
             }
             catch (ArgumentException ex)
             {
-                _logger.LogWarning($"Invalid payment data: {ex.Message}");
                 return BadRequest(new { error = ex.Message });
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogWarning($"Payment processing failed: {ex.Message}");
                 return BadRequest(new { error = ex.Message });
             }
             catch (UnauthorizedAccessException ex)
             {
-                _logger.LogWarning($"Unauthorized card payment attempt: {ex.Message}");
                 return Unauthorized(new { error = "Payment authorization failed" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing card payment");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
@@ -132,12 +119,10 @@ namespace Bank.API.Controllers
             }
             catch (ArgumentException ex)
             {
-                _logger.LogWarning($"Invalid payment ID: {paymentId}, Error: {ex.Message}");
                 return NotFound(new { error = "Payment not found" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error getting payment status: {paymentId}");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
@@ -161,7 +146,6 @@ namespace Bank.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error cancelling payment: {paymentId}");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
@@ -187,12 +171,10 @@ namespace Bank.API.Controllers
             }
             catch (ArgumentException ex)
             {
-                _logger.LogWarning($"Invalid payment ID for QR: {paymentId}, Error: {ex.Message}");
                 return NotFound(new { error = "Payment not found" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error generating QR code: {paymentId}");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
@@ -214,12 +196,10 @@ namespace Bank.API.Controllers
             }
             catch (ArgumentException ex)
             {
-                _logger.LogWarning($"Invalid payment ID for QR status: {paymentId}, Error: {ex.Message}");
                 return NotFound(new { error = "Payment not found" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error getting QR payment status: {paymentId}");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
@@ -246,12 +226,10 @@ namespace Bank.API.Controllers
             }
             catch (ArgumentException ex)
             {
-                _logger.LogWarning($"Invalid payment ID for QR confirm: {paymentId}, Error: {ex.Message}");
                 return NotFound(new { error = "Payment not found" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error confirming QR payment: {paymentId}");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }

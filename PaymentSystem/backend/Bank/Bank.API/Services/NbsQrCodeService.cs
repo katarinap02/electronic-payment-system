@@ -11,13 +11,11 @@ namespace Bank.API.Services
     public class NbsQrCodeService
     {
         private readonly HttpClient _httpClient;
-        private readonly ILogger<NbsQrCodeService> _logger;
         private const string NBS_API_BASE_URL = "https://nbs.rs/QRcode/api/qr/v1";
 
-        public NbsQrCodeService(HttpClient httpClient, ILogger<NbsQrCodeService> logger)
+        public NbsQrCodeService(HttpClient httpClient)
         {
             _httpClient = httpClient;
-            _logger = logger;
         }
 
         /// <summary>
@@ -33,7 +31,6 @@ namespace Bank.API.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error generating QR code");
                 return new QrCodeGenerationResult
                 {
                     Success = false,
@@ -86,9 +83,6 @@ namespace Bank.API.Services
                 // Format: K:PR|V:01|C:1|R:IBAN|N:Ime|I:Iznos|SF:Sifra|S:Svrha|RO:Poziv
                 var ipsText = $"K:PR|V:01|C:1|R:{accountNumber}|N:{receiverName}|I:{amountFormatted}|SF:289|S:{paymentPurpose}|RO:";
 
-                _logger.LogInformation($"=== LOCAL QR GENERATION ===");
-                _logger.LogInformation($"PaymentId: {payload.PaymentId}");
-                _logger.LogInformation($"IPS Text: {ipsText}");
 
                 // Generiši QR kod koristeći QRCoder library
                 using var qrGenerator = new QRCodeGenerator();
@@ -98,7 +92,7 @@ namespace Bank.API.Services
                 var qrCodeImage = qrCode.GetGraphic(20); // 20 pixels per module
                 var base64Image = Convert.ToBase64String(qrCodeImage);
 
-                _logger.LogInformation($"Successfully generated LOCAL QR code for payment: {payload.PaymentId}, Image size: {qrCodeImage.Length} bytes");
+             
 
                 return new QrCodeGenerationResult
                 {
@@ -110,7 +104,6 @@ namespace Bank.API.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error generating local QR code");
                 return new QrCodeGenerationResult
                 {
                     Success = false,
@@ -180,11 +173,7 @@ namespace Bank.API.Services
                 var jsonContent = JsonSerializer.Serialize(nbsPayload);
                 var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-                // LOG: Prikaži tačan JSON koji šaljemo NBS API-ju
-                _logger.LogInformation($"=== NBS API REQUEST ===");
-                _logger.LogInformation($"PaymentId: {payload.PaymentId}");
-                _logger.LogInformation($"JSON Payload: {jsonContent}");
-                _logger.LogInformation($"URL: {NBS_API_BASE_URL}/generate?lang=sr_RS_Latn");
+              
 
                 // Pozovi NBS API za generisanje QR koda - koristi /generate endpoint koji vraća JSON
                 var response = await _httpClient.PostAsync($"{NBS_API_BASE_URL}/generate?lang=sr_RS_Latn", content);
@@ -200,7 +189,7 @@ namespace Bank.API.Services
                     {
                         var base64Image = imageProperty.GetString() ?? string.Empty;
                         
-                        _logger.LogInformation($"Successfully generated QR code for payment: {payload.PaymentId}, Image length: {base64Image.Length}");
+                        
 
                         return new QrCodeGenerationResult
                         {
@@ -212,7 +201,7 @@ namespace Bank.API.Services
                     }
                     else
                     {
-                        _logger.LogWarning($"NBS API response missing 'image' field: {responseContent}");
+
                         return new QrCodeGenerationResult
                         {
                             Success = false,
@@ -223,7 +212,7 @@ namespace Bank.API.Services
                 else
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
-                    _logger.LogWarning($"NBS API returned error: {response.StatusCode}, Content: {errorContent}");
+                   
 
                     return new QrCodeGenerationResult
                     {
@@ -234,7 +223,7 @@ namespace Bank.API.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error generating QR code via NBS API");
+
                 return new QrCodeGenerationResult
                 {
                     Success = false,
@@ -272,7 +261,7 @@ namespace Bank.API.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error validating QR code");
+
                 return false;
             }
         }

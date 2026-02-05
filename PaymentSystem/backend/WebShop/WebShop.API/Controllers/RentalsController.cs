@@ -10,12 +10,10 @@ namespace WebShop.API.Controllers
     public class RentalsController : ControllerBase
     {
         private readonly RentalService _rentalService;
-        private readonly ILogger<RentalsController> _logger;
 
         public RentalsController(RentalService rentalService, ILogger<RentalsController> logger)
         {
             _rentalService = rentalService;
-            _logger = logger;
         }
 
         /// <summary>
@@ -44,7 +42,6 @@ namespace WebShop.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating rental");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
@@ -67,7 +64,6 @@ namespace WebShop.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error getting rental: {id}");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
@@ -90,7 +86,6 @@ namespace WebShop.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error getting rental by payment: {paymentId}");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
@@ -110,7 +105,6 @@ namespace WebShop.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error getting active rentals for user: {userId}");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
@@ -130,7 +124,6 @@ namespace WebShop.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error getting rental history for user: {userId}");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
@@ -150,7 +143,6 @@ namespace WebShop.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error getting all rentals for user: {userId}");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
@@ -176,7 +168,6 @@ namespace WebShop.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error updating rental status: {id}");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
@@ -199,7 +190,6 @@ namespace WebShop.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error cancelling rental: {id}");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }

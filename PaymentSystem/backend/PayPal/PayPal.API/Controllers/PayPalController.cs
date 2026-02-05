@@ -9,12 +9,10 @@ namespace PayPal.API.Controllers
     public class PayPalController : ControllerBase
     {
         private readonly PayPalService _payPalService;
-        private readonly ILogger<PayPalController> _logger;
 
         public PayPalController(PayPalService payPalService, ILogger<PayPalController> logger)
         {
             _payPalService = payPalService;
-            _logger = logger;
         }
 
         //ovo poziva psp
@@ -27,7 +25,6 @@ namespace PayPal.API.Controllers
                 var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
                 var userAgent = Request.Headers["User-Agent"].ToString();
 
-                _logger.LogInformation("Create order requested for PSP: {PspId}", request.PspTransactionId);
 
                 var response = await _payPalService.CreateOrderAsync(request, ipAddress, userAgent);
 
@@ -35,7 +32,6 @@ namespace PayPal.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in CreateOrder endpoint");
                 return BadRequest(new { error = ex.Message });
             }
         }
@@ -57,7 +53,6 @@ namespace PayPal.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error capturing order");
                 return BadRequest(new { error = ex.Message });
             }
         }
@@ -88,7 +83,6 @@ namespace PayPal.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting transaction");
                 return BadRequest(new { error = ex.Message });
             }
         }

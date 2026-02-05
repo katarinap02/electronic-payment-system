@@ -20,7 +20,8 @@ namespace Bank.API.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("AutoCapture Background Service started.");
+            _logger.LogInformation("[BANK-AUTOCAPTURE] STARTED | CheckInterval: {CheckInterval}m | CaptureAge: {CaptureAge}h",
+                _checkInterval.TotalMinutes, _captureAge.TotalHours);
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -36,7 +37,8 @@ namespace Bank.API.Services
 
                         if (oldTransactions.Any())
                         {
-                            _logger.LogInformation($"Found {oldTransactions.Count()} transactions for auto-capture");
+                            _logger.LogInformation("[BANK-AUTOCAPTURE] BATCH_START | Count: {Count} | AgeThreshold: {Age}h",
+                                oldTransactions.Count(), _captureAge.TotalHours);
 
                             foreach (var transaction in oldTransactions)
                             {
@@ -60,22 +62,25 @@ namespace Bank.API.Services
                                             // Ažuriraj status transakcije na CAPTURED
                                             transactionRepo.UpdateStatus(transaction.Id, TransactionStatus.CAPTURED);
 
-                                            _logger.LogInformation($"Auto-captured transaction {transaction.PaymentId} " +
-                                                                  $"(Amount: {transaction.Amount} {transaction.Currency})");
+                                            _logger.LogInformation("[BANK-AUTOCAPTURE] CAPTURED | PaymentId: {PaymentId} | TxId: {TxId} | MerchantId: {MerchantId} | Amount: {Amount} {Currency}",
+                                                transaction.PaymentId, transaction.Id, transaction.MerchantId, transaction.Amount, transaction.Currency);
                                         }
                                         else
                                         {
-                                            _logger.LogWarning($"Failed to auto-capture transaction {transaction.PaymentId}");
+                                            _logger.LogWarning("[BANK-AUTOCAPTURE] FAILED | Event: TRANSFER_FAILED | PaymentId: {PaymentId} | TxId: {TxId} | MerchantId: {MerchantId}",
+                                                 transaction.PaymentId, transaction.Id, transaction.MerchantId);
                                         }
                                     }
                                     else
                                     {
-                                        _logger.LogWarning($"Transaction {transaction.PaymentId} missing account IDs");
+                                        _logger.LogWarning("[BANK-AUTOCAPTURE] SKIPPED | Event: MISSING_ACCOUNTS | PaymentId: {PaymentId} | TxId: {TxId} | HasCustomerAcc: {HasCustomer} | HasMerchantAcc: {HasMerchant}",
+                                            transaction.PaymentId, transaction.Id, transaction.CustomerAccountId.HasValue, transaction.MerchantAccountId > 0);
                                     }
                                 }
                                 catch (Exception ex)
                                 {
-                                    _logger.LogError(ex, $"Error auto-capturing transaction {transaction.PaymentId}");
+                                    _logger.LogError(ex, "[BANK-AUTOCAPTURE] ERROR | PaymentId: {PaymentId} | TxId: {TxId} | ErrorType: {ErrorType}",
+                                         transaction.PaymentId, transaction.Id, ex.GetType().Name);
                                 }
                             }
                         }
@@ -83,7 +88,7 @@ namespace Bank.API.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error in AutoCaptureBackgroundService");
+                    _logger.LogError(ex, "[BANK-AUTOCAPTURE] SERVICE_ERROR | ErrorType: {ErrorType}", ex.GetType().Name);
                 }
 
                 // Čekaj sledeći interval

@@ -8,12 +8,10 @@ namespace Bank.API.Services
     public class SeedDataService
     {
         private readonly AppDbContext _context;
-        private readonly ILogger<SeedDataService> _logger;
 
-        public SeedDataService(AppDbContext context, ILogger<SeedDataService> logger)
+        public SeedDataService(AppDbContext context)
         {
             _context = context;
-            _logger = logger;
         }
 
         public void InitializeTestData()
@@ -23,11 +21,9 @@ namespace Bank.API.Services
                 // Proveri da li vec postoje podaci
                 if (_context.Customers.Any())
                 {
-                    _logger.LogInformation("Database already seeded.");
                     return;
                 }
 
-                _logger.LogInformation("Seeding test data...");
 
                 // 1. Kreiraj Merchant-a (WebShop owner)
                 var merchant = CreateMerchant();
@@ -53,14 +49,10 @@ namespace Bank.API.Services
 
                 _context.SaveChanges();
 
-                _logger.LogInformation($"Test data created: Merchant={merchant.FullName}, Customer={customer.FullName}");
-                _logger.LogInformation($"Merchant Account: {merchantAccount.AccountNumber}, Balance: {merchantAccount.Balance}");
-                _logger.LogInformation($"Customer Account: {customerAccount.AccountNumber}, Balance: {customerAccount.Balance}");
-                _logger.LogInformation($"Cards: Visa={visaCard.MaskedPan}, Mastercard={mastercard.MaskedPan}");
+              
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error seeding test data");
                 throw;
             }
         }

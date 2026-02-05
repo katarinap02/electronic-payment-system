@@ -10,15 +10,18 @@ namespace WebShop.API.Services
         private readonly RentalRepository _rentalRepo;
         private readonly IVehicleRepository _vehicleRepo;
         private readonly ILogger<RentalService> _logger;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         public RentalService(
             RentalRepository rentalRepo, 
             IVehicleRepository vehicleRepo,
-            ILogger<RentalService> logger)
+            ILogger<RentalService> logger,
+            IHttpContextAccessor httpContextAccessor)
         {
             _rentalRepo = rentalRepo;
             _vehicleRepo = vehicleRepo;
             _logger = logger;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         /// <summary>
@@ -26,18 +29,31 @@ namespace WebShop.API.Services
         /// </summary>
         public async Task<RentalDto> CreateRentalAsync(CreateRentalDto dto)
         {
+            var correlationId = GetCorrelationId();
+            var ipAddress = GetClientIp();
+            var startTime = DateTime.UtcNow;
+
+            _logger.LogInformation("[WEBSHOP-RENTAL] CREATE_ATTEMPT | Desc: Creating rental after payment | PaymentId: {PaymentId} | GlobalTxId: {GlobalTxId} | UserId: {UserId} | VehicleId: {VehicleId} | Amount: {Amount} {Currency} | CorrId: {CorrId} | IP: {IP}",
+                dto.PaymentId, dto.GlobalTransactionId, dto.UserId, dto.VehicleId, dto.TotalPrice, dto.Currency, correlationId, ipAddress);
             try
             {
                 // Proveri da li vozilo postoji
                 var vehicle = _vehicleRepo.GetById(dto.VehicleId);
                 if (vehicle == null)
+                {
+                    _logger.LogWarning("[WEBSHOP-RENTAL] CREATE_FAILED | Desc: Vehicle not found | PaymentId: {PaymentId} | VehicleId: {VehicleId} | FailReason: VEHICLE_NOT_FOUND | CorrId: {CorrId} | IP: {IP}",
+                        dto.PaymentId, dto.VehicleId, correlationId, ipAddress);
                     throw new ArgumentException("Vehicle not found");
+                }
 
                 // Izračunaj broj dana
                 var rentalDays = (dto.EndDate.Date - dto.StartDate.Date).Days;
                 if (rentalDays <= 0)
+                {
+                    _logger.LogWarning("[WEBSHOP-RENTAL] CREATE_FAILED | Desc: Invalid rental dates | PaymentId: {PaymentId} | StartDate: {StartDate} | EndDate: {EndDate} | FailReason: INVALID_DATES | CorrId: {CorrId} | IP: {IP}",
+                        dto.PaymentId, dto.StartDate, dto.EndDate, correlationId, ipAddress);
                     throw new ArgumentException("End date must be after start date");
-
+                }
                 // Proveri dostupnost vozila
                 var isAvailable = await _rentalRepo.IsVehicleAvailableAsync(
                     dto.VehicleId, 
@@ -45,7 +61,11 @@ namespace WebShop.API.Services
                     dto.EndDate);
 
                 if (!isAvailable)
+                {
+                    _logger.LogWarning("[WEBSHOP-RENTAL] CREATE_FAILED | Desc: Vehicle not available | PaymentId: {PaymentId} | VehicleId: {VehicleId} | StartDate: {StartDate} | EndDate: {EndDate} | FailReason: VEHICLE_UNAVAILABLE | CorrId: {CorrId} | IP: {IP}",
+                        dto.PaymentId, dto.VehicleId, dto.StartDate, dto.EndDate, correlationId, ipAddress);
                     throw new InvalidOperationException("Vehicle is not available for selected dates");
+                }
 
                 // Kreiraj rental objekat
                 var rental = new Rental
@@ -78,14 +98,18 @@ namespace WebShop.API.Services
                 };
 
                 var created = await _rentalRepo.CreateAsync(rental);
-                
-                _logger.LogInformation($"Rental created: ID={created.Id}, User={dto.UserId}, Vehicle={dto.VehicleId}, PaymentId={dto.PaymentId}");
+
+                var duration = DateTime.UtcNow - startTime;
+
+                _logger.LogInformation("[WEBSHOP-RENTAL] CREATED | Desc: Rental successfully created | RentalId: {RentalId} | PaymentId: {PaymentId} | GlobalTxId: {GlobalTxId} | UserId: {UserId} | VehicleId: {VehicleId} | RentalDays: {RentalDays} | TotalPrice: {TotalPrice} {Currency} | DurationMs: {DurationMs} | CorrId: {CorrId}",
+                    created.Id, dto.PaymentId, dto.GlobalTransactionId, dto.UserId, dto.VehicleId, rentalDays, dto.TotalPrice, dto.Currency, duration.TotalMilliseconds, correlationId);
 
                 return await MapToDto(created);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error creating rental for payment: {dto.PaymentId}");
+                _logger.LogError(ex, "[WEBSHOP-RENTAL] CREATE_ERROR | Desc: Unexpected error creating rental | PaymentId: {PaymentId} | GlobalTxId: {GlobalTxId} | UserId: {UserId} | ErrorType: {ErrorType} | CorrId: {CorrId} | IP: {IP}",
+                   dto.PaymentId, dto.GlobalTransactionId, dto.UserId, ex.GetType().Name, correlationId, ipAddress);
                 throw;
             }
         }
@@ -161,10 +185,18 @@ namespace WebShop.API.Services
         /// </summary>
         public async Task<RentalDto?> UpdateRentalStatusAsync(int id, UpdateRentalStatusDto dto)
         {
+            var correlationId = GetCorrelationId();
+
+            _logger.LogInformation("[WEBSHOP-RENTAL] STATUS_UPDATE_ATTEMPT | Desc: Updating rental status | RentalId: {RentalId} | NewStatus: {NewStatus} | CorrId: {CorrId}",
+                id, dto.Status, correlationId);
             var rental = await _rentalRepo.GetByIdAsync(id);
             if (rental == null)
+            {
+                _logger.LogWarning("[WEBSHOP-RENTAL] STATUS_UPDATE_FAILED | Desc: Rental not found | RentalId: {RentalId} | CorrId: {CorrId}",
+                    id, correlationId);
                 return null;
-
+            }
+            var oldStatus = rental.Status;
             rental.Status = dto.Status;
             
             if (dto.Status == "Completed")
@@ -176,8 +208,9 @@ namespace WebShop.API.Services
                 rental.Notes = dto.Notes;
 
             await _rentalRepo.UpdateAsync(rental);
-            
-            _logger.LogInformation($"Rental status updated: ID={id}, Status={dto.Status}");
+
+            _logger.LogInformation("[WEBSHOP-RENTAL] STATUS_UPDATED | Desc: Rental status changed | RentalId: {RentalId} | PaymentId: {PaymentId} | StatusChange: {OldStatus}->{NewStatus} | CorrId: {CorrId}",
+                id, rental.PaymentId, oldStatus, dto.Status, correlationId);
 
             return await MapToDto(rental);
         }
@@ -189,6 +222,25 @@ namespace WebShop.API.Services
         {
             return await _rentalRepo.DeleteAsync(id);
         }
+
+        private string GetCorrelationId()
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            return httpContext?.Request.Headers["X-Correlation-Id"].FirstOrDefault()
+                ?? Guid.NewGuid().ToString("N")[..12];
+        }
+
+        private string GetClientIp()
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext == null) return "internal";
+
+            var forwarded = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(forwarded)) return forwarded.Split(',')[0].Trim();
+
+            return httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        }
+    
 
         /// <summary>
         /// Mapira Rental model u DTO

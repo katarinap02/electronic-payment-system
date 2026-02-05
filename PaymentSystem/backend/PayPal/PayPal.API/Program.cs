@@ -53,7 +53,7 @@ Log.Logger = new LoggerConfiguration()
         apiKey: builder.Configuration["Seq:ApiKey"],
         restrictedToMinimumLevel: LogEventLevel.Information)
     .CreateLogger();
-builder.Host.UseSerilog();
+builder.Host.UseSerilog(Log.Logger);
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
