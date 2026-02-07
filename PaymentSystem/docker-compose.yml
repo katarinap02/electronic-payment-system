@@ -203,8 +203,6 @@ services:
       - ./frontend/webshop:/app
       - ./certs:/app/certs:ro
       - /app/node_modules
-    environment:
-      - VITE_API_URL=https://localhost:5440/api
     depends_on:
       - webshop-api
     command: npm run dev -- --host 0.0.0.0
@@ -223,8 +221,6 @@ services:
       - ./frontend/bank:/app
       - ./certs:/app/certs:ro
       - /app/node_modules
-    environment:
-      - VITE_API_BASE_URL=https://localhost:5441
     depends_on:
       - bank-api
     command: npm run dev -- --host 0.0.0.0
@@ -243,8 +239,6 @@ services:
       - ./frontend/psp:/app
       - ./certs:/app/certs:ro
       - /app/node_modules
-    environment:
-      - VITE_API_URL=https://localhost:5442
     depends_on:
       - psp-api
     command: npm run dev -- --host 0.0.0.0

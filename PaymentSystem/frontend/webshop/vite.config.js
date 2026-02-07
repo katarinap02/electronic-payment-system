@@ -18,8 +18,8 @@ export default defineConfig({
   },
   server: {
     https: {
-      pfx: fs.readFileSync(path.resolve(__dirname, './certs/frontend-webshop.pfx')),
-      passphrase: 'dev-cert-2024'
+      cert: fs.readFileSync(path.resolve(__dirname, './certs/localhost+2.pem')),
+      key: fs.readFileSync(path.resolve(__dirname, './certs/localhost+2-key.pem'))
     },
     port: 5173,
     host: true,

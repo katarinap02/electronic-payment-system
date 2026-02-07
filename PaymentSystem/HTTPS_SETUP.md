@@ -27,6 +27,83 @@ Skripta će kreirati sertifikate za:
 
 **Lozinka za sve**: `dev-cert-2024`
 
+### 1.5. Trusted Sertifikati za Frontend (mkcert)
+
+**Problem:** Browser-i pokazuju security upozorenja za self-signed sertifikate na frontend aplikacijama.
+
+**Rešenje:** Koristite `mkcert` za generisanje lokalno trusted sertifikata za HTTPS frontend development.
+
+#### Instalacija mkcert
+
+```powershell
+cd PaymentSystem\certs
+
+# Opcija 1: Preuzimanje exe fajla
+Invoke-WebRequest -Uri "https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-windows-amd64.exe" -OutFile "mkcert.exe"
+
+# Opcija 2: Chocolatey
+choco install mkcert
+
+# Opcija 3: Scoop
+scoop bucket add extras
+scoop install mkcert
+```
+
+#### Generisanje Trusted Sertifikata
+
+```powershell
+# 1. Instaliraj local CA u sistem trust store
+.\mkcert.exe -install
+
+# 2. Generiši sertifikat za localhost
+.\mkcert.exe localhost 127.0.0.1 ::1
+```
+
+Ovo generiše:
+- `localhost+2.pem` - Public certificate
+- `localhost+2-key.pem` - Private key
+
+#### Firefox Setup (Opcionalno)
+
+Firefox koristi sopstveni certificate store:
+
+1. Otvori Firefox → **Settings** → **Privacy & Security**
+2. **Certificates** → **View Certificates** → **Authorities**
+3. **Import...** → Izaberi: `C:\Users\<USERNAME>\AppData\Local\mkcert\rootCA.pem`
+4. Čekiraj **Trust this CA to identify websites** → **OK**
+
+```powershell
+# Pronalaženje CA lokacije
+.\mkcert.exe -CAROOT
+```
+
+#### Vite Konfiguracija
+
+Frontend Vite serveri su već konfigurisani:
+
+```javascript
+// frontend/webshop/vite.config.js
+import fs from 'fs'
+import path from 'path'
+
+export default defineConfig({
+  server: {
+    https: {
+      cert: fs.readFileSync(path.resolve(__dirname, './certs/localhost+2.pem')),
+      key: fs.readFileSync(path.resolve(__dirname, './certs/localhost+2-key.pem'))
+    },
+    port: 5173,
+    host: true
+  }
+})
+```
+
+**Rezultat:**
+- ✅ Frontend servisi dostupni preko HTTPS bez browser upozorenja
+- ✅ https://localhost:5173 (WebShop)
+- ✅ https://localhost:5174 (PSP)
+- ✅ https://localhost:5172 (Bank)
+
 ### 2. Docker Konfiguracija
 
 Svi servisi su konfigurisani u `docker-compose.yml` da koriste **samo HTTPS**:
@@ -106,10 +183,22 @@ builder.Services.AddHttpClient("PSPClient", client =>
 
 ### Korak 1: Generisanje sertifikata
 
+**Backend sertifikati (PFX):**
 ```powershell
 cd PaymentSystem\certs
 .\generate-certs.ps1
 ```
+
+**Frontend trusted sertifikati (mkcert + PEM):**
+```powershell
+# U istom folderu (PaymentSystem\certs)
+.\mkcert.exe -install
+.\mkcert.exe localhost 127.0.0.1 ::1
+```
+
+**Rezultat:**
+- Backend: `*.pfx` i `*.cer` fajlovi za sve servise
+- Frontend: `localhost+2.pem` i `localhost+2-key.pem`
 
 ### Korak 2: Pokretanje Docker kontejnera
 
@@ -166,7 +255,8 @@ openssl pkcs12 -in .\certs\psp-api.pfx -nodes -passin pass:dev-cert-2024 | opens
 ```
 ┌─────────────┐         HTTPS          ┌─────────────┐
 │  Frontend   │ ───────────────────────>│  WebShop    │
-│   (HTTP)    │                         │   :5440     │
+│  (HTTPS)    │     via Vite Proxy      │   :5440     │
+│  :5173      │                         │   (HTTPS)   │
 └─────────────┘                         └──────┬──────┘
                                                │
                                                │ HTTPS
@@ -174,6 +264,7 @@ openssl pkcs12 -in .\certs\psp-api.pfx -nodes -passin pass:dev-cert-2024 | opens
                                         ┌──────▼──────┐
                                         │     PSP     │
                                         │   :5442     │
+                                        │   (HTTPS)   │
                                         └──────┬──────┘
                                                │
                           ┌────────────────────┼────────────────────┐
@@ -182,8 +273,11 @@ openssl pkcs12 -in .\certs\psp-api.pfx -nodes -passin pass:dev-cert-2024 | opens
                    ┌──────▼──────┐      ┌──────▼──────┐     ┌──────▼──────┐
                    │    Bank     │      │   PayPal    │     │  WebShop    │
                    │   :5441     │      │   :5443     │     │   :5440     │
+                   │   (HTTPS)   │      │   (HTTPS)   │     │   (HTTPS)   │
                    └─────────────┘      └─────────────┘     └─────────────┘
 ```
+
+**Napomena:** Sva komunikacija (frontend ↔ backend i backend ↔ backend) koristi HTTPS sa TLS 1.2+ enkripcijom.
 
 ## 📝 Portovi
 
@@ -193,19 +287,23 @@ openssl pkcs12 -in .\certs\psp-api.pfx -nodes -passin pass:dev-cert-2024 | opens
 | Bank API | 5441 | https://localhost:5441 |
 | PSP API | 5442 | https://localhost:5442 |
 | PayPal API | 5443 | https://localhost:5443 |
-| Frontend WebShop | 5173 | http://localhost:5173 |
-| Frontend Bank | 5172 | http://localhost:5172 |
-| Frontend PSP | 5174 | http://localhost:5174 |
+| **Frontend WebShop** | 5173 | https://localhost:5173 |
+| **Frontend Bank** | 5172 | https://localhost:5172 |
+| **Frontend PSP** | 5174 | https://localhost:5174 |
 
-**Napomena**: Frontend-ovi koriste HTTP jer su u development modu, ali komuniciraju sa backend-ovima preko HTTPS.
+**Napomena**: 
+- Svi backend servisi koriste **self-signed PFX** sertifikate (`*.pfx`)
+- Svi frontend servisi koriste **mkcert trusted PEM** sertifikate (`localhost+2.pem`)
+- Frontend development serveri koriste HTTPS sa mkcert sertifikatima (bez browser upozorenja)
 
 ## 🔒 Sigurnost
 
 ### Development Okruženje
-- ✅ Self-signed sertifikati
-- ✅ Validacija isključena (`DangerousAcceptAnyServerCertificateValidator`)
-- ✅ Samo HTTPS komunikacija između servisa
-- ⚠️ Frontend koristi HTTP (development only)
+- ✅ Self-signed PFX sertifikati za backend (inter-service komunikacija)
+- ✅ mkcert trusted PEM sertifikati za frontend (browser pristup)
+- ✅ Validacija isključena za backend-backend komunikaciju (`DangerousAcceptAnyServerCertificateValidator`)
+- ✅ **Samo HTTPS komunikacija** za sve servise (backend i frontend)
+- ✅ TLS 1.2+ enkripcija svuda
 
 ### Production Okruženje
 
@@ -215,7 +313,8 @@ openssl pkcs12 -in .\certs\psp-api.pfx -nodes -passin pass:dev-cert-2024 | opens
 2. **Uklonite** `DangerousAcceptAnyServerCertificateValidator`
 3. **Omogućite** punu validaciju sertifikata
 4. **Koristite** tajne za certificate passwords (Azure Key Vault, AWS Secrets Manager)
-5. **Omogućite HTTPS** i za frontend aplikacije
+5. **Frontend aplikacije**: Deploy sa reverse proxy-jem (Nginx, Caddy) koji automatski upravlja HTTPS
+6. **Certificate renewal**: Automatizujte sa Let's Encrypt + certbot ili cloud provider-om
 
 **Primer production konfiguracije:**
 
@@ -292,11 +391,55 @@ ls certs/
 VITE_API_URL=https://localhost:5440/api
 ```
 
+### Problem: Browser prikazuje "Certificate not trusted" upozorenje
+
+**Rešenje:**
+```powershell
+# Proveri da li је mkcert CA instaliran
+cd PaymentSystem\certs
+.\mkcert.exe -CAROOT
+
+# Reinstaliraj CA ako treba
+.\mkcert.exe -uninstall
+.\mkcert.exe -install
+
+# Generiši nove sertifikate
+rm localhost+2*.pem
+.\mkcert.exe localhost 127.0.0.1 ::1
+
+# Restartuj frontend kontejnere
+cd ..
+docker restart frontend-webshop frontend-psp frontend-bank
+```
+
+**Za Firefox:**
+```
+Settings → Privacy & Security → Certificates → View Certificates → Authorities → Import
+Izaberi: C:\Users\<USERNAME>\AppData\Local\mkcert\rootCA.pem
+Čekiraj "Trust this CA to identify websites"
+```
+
+### Problem: "ENOENT: no such file or directory, open '/app/certs/localhost+2.pem'"
+
+**Rešenje:**
+```powershell
+# Proveri da li sertifikati postoje u certs folderu
+ls PaymentSystem\certs\localhost+2*.pem
+
+# Ako ne postoje, generiši ih
+cd PaymentSystem\certs
+.\mkcert.exe localhost 127.0.0.1 ::1
+
+# Proveri da li su mount-ovani u Docker
+docker exec frontend-webshop ls -la /app/certs/
+```
+
 ## 📚 Dodatni Resursi
 
 - [ASP.NET Core HTTPS Configuration](https://learn.microsoft.com/en-us/aspnet/core/security/https)
 - [Docker Secrets Management](https://docs.docker.com/engine/swarm/secrets/)
 - [Let's Encrypt - Free SSL Certificates](https://letsencrypt.org/)
+- [mkcert - Simple local HTTPS](https://github.com/FiloSottile/mkcert)
 
 ## ✅ Checklist
 
@@ -310,10 +453,12 @@ Pre deploy-a na production:
 - [ ] Monitoring SSL isteka postavljen
 - [ ] Firewall pravila konfigurisana
 - [ ] HSTS headers omogućeni
-- [ ] Frontend aplikacije takođe koriste HTTPS
+- [ ] Frontend aplikacije deploy-ovane sa validnim CA sertifikatima (ne mkcert)
+- [ ] Reverse proxy (Nginx/Caddy) konfigurisan za frontend HTTPS
+- [ ] Content Security Policy (CSP) headeri konfigurisani
 
 ---
 
-**Verzija**: 2.0 (HTTPS Only)  
+**Verzija**: 3.0 (HTTPS Everywhere - Backend & Frontend)  
 **Datum**: Februar 2026  
 **Autor**: Payment System Team

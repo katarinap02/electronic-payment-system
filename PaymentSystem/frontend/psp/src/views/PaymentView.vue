@@ -103,7 +103,7 @@ const loadPaymentDetails = async () => {
     // If unauthorized, redirect to error page
     debugger
     if (err.response?.status === 401) {
-      window.location.href = 'http://localhost:5173/payment-error?errorCode=UNAUTHORIZED&errorMessage=Invalid or expired payment link'
+      window.location.href = 'https://localhost:5173/payment-error?errorCode=UNAUTHORIZED&errorMessage=Invalid or expired payment link'
     }
   } finally {
     loading.value = false
@@ -224,7 +224,7 @@ onMounted(async () => {
   }
 })
 const goBackToShop = () => {
-  window.location.href = 'http://localhost:5173/vehicles'
+  window.location.href = 'https://localhost:5173/vehicles'
 }
 </script>
 

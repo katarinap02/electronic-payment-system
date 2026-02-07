@@ -105,14 +105,14 @@ public static class SeedData
             var webShop = new WebShop
             {
                 Name = "Car Rental WebShop",
-                Url = "http://localhost:5173",
+                Url = "https://localhost:5173",
                 ApiKey = "webshop-api-key-change-this",
                 MerchantId = "WEBSHOP_001",
                 Status = WebShopStatus.Active,
                 CreatedAt = DateTime.UtcNow,
-                ErrorUrl = "http://localhost:5173/payment-error",
-                FailedUrl = "http://localhost:5173/payment-failed",
-                SuccessUrl = "http://localhost:5173/payment-success"
+                ErrorUrl = "https://localhost:5173/payment-error",
+                FailedUrl = "https://localhost:5173/payment-failed",
+                SuccessUrl = "https://localhost:5173/payment-success"
             };
 
             context.WebShops.Add(webShop);

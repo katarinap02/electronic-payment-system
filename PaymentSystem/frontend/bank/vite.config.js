@@ -19,8 +19,8 @@ export default defineConfig({
   },
   server: {
     https: {
-      pfx: fs.readFileSync(path.resolve(__dirname, './certs/frontend-bank.pfx')),
-      passphrase: 'dev-cert-2024'
+      cert: fs.readFileSync(path.resolve(__dirname, './certs/localhost+2.pem')),
+      key: fs.readFileSync(path.resolve(__dirname, './certs/localhost+2-key.pem'))
     },
     port: 5172,
     host: true,
