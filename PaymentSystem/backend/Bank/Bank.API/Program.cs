@@ -25,8 +25,28 @@ catch
 
 var builder = WebApplication.CreateBuilder(args);
 
+
 var logsPath = builder.Configuration["Serilog:FilePath"] ?? "/logs/bank";
 Directory.CreateDirectory(logsPath);
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.ListenAnyIP(443, listenOptions =>
+    {
+        var certPath = builder.Configuration["Https:CertificatePath"] ?? "/app/certs/bank-api.pfx";
+        var certPassword = builder.Configuration["Https:CertificatePassword"] ?? "dev-cert-2024";
+        
+        if (File.Exists(certPath))
+        {
+            listenOptions.UseHttps(certPath, certPassword);
+        }
+        else
+        {
+            Console.WriteLine($"WARNING: Certificate not found at {certPath}. Using development certificate.");
+            listenOptions.UseHttps();
+        }
+    });
+});
+
 
 //Serilog
 Log.Logger = new LoggerConfiguration()
@@ -58,7 +78,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
         | ForwardedHeaders.XForwardedProto;
-    // Dozvoli sve proxy-je u Docker mreži
+    // Dozvoli sve proxy-je u Docker mreï¿½i
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
 });
@@ -96,7 +116,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5174", "http://localhost:5172", "http://frontend-bank:5173")
+            policy.WithOrigins("https://localhost:5174", "https://localhost:5172", "https://localhost:5441", "https://localhost:5442", "https://frontend-bank:5172")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });

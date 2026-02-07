@@ -29,6 +29,25 @@ var builder = WebApplication.CreateBuilder(args);
 
 var logsPath = builder.Configuration["Serilog:FilePath"] ?? "/logs/webshop";
 Directory.CreateDirectory(logsPath);
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.ListenAnyIP(443, listenOptions =>
+    {
+        var certPath = builder.Configuration["Https:CertificatePath"] ?? "/app/certs/webshop-api.pfx";
+        var certPassword = builder.Configuration["Https:CertificatePassword"] ?? "dev-cert-2024";
+        
+        if (File.Exists(certPath))
+        {
+            listenOptions.UseHttps(certPath, certPassword);
+        }
+        else
+        {
+            Console.WriteLine($"WARNING: Certificate not found at {certPath}. Using development certificate.");
+            listenOptions.UseHttps();
+        }
+    });
+});
+
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
@@ -59,11 +78,32 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
         | ForwardedHeaders.XForwardedProto;
-    // Dozvoli sve proxy-je u Docker mreži
+    // Dozvoli sve proxy-je u Docker mreï¿½i
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
 });
 builder.Services.AddHttpContextAccessor();
+
+// Configure HttpClient for PSP communication with HTTPS
+builder.Services.AddHttpClient("PSPClient", client =>
+{
+    var pspApiUrl = builder.Configuration["PSP:ApiUrl"] ?? "https://psp-api:443/api";
+    client.BaseAddress = new Uri(pspApiUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+})
+.ConfigurePrimaryHttpMessageHandler(() =>
+{
+    var handler = new HttpClientHandler();
+    
+    // For development: Accept self-signed certificates
+    if (builder.Environment.IsDevelopment())
+    {
+        handler.ServerCertificateCustomValidationCallback = 
+            HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+    }
+    
+    return handler;
+});
 
 // User services
 builder.Services.AddScoped<UserRepository>();
@@ -91,7 +131,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5173")
+            policy.WithOrigins("https://localhost:5173", "https://localhost:5440")
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials();

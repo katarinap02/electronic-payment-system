@@ -25,6 +25,28 @@ catch
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure Kestrel for HTTPS only
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    // HTTPS port only
+    serverOptions.ListenAnyIP(443, listenOptions =>
+    {
+        var certPath = builder.Configuration["Https:CertificatePath"] ?? "/app/certs/psp-api.pfx";
+        var certPassword = builder.Configuration["Https:CertificatePassword"] ?? "dev-cert-2024";
+        
+        if (File.Exists(certPath))
+        {
+            listenOptions.UseHttps(certPath, certPassword);
+        }
+        else
+        {
+            // Fallback - generisanje dev sertifikata u runtime-u
+            Console.WriteLine($"WARNING: Certificate not found at {certPath}. Using development certificate.");
+            listenOptions.UseHttps();
+        }
+    });
+});
+
 // Add Infrastructure layer (DbContext, Repositories, Services)
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -35,8 +57,11 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy.WithOrigins(
-                    "http://localhost:5174", // PSP Frontend
-                    "http://localhost:5173"  // WebShop Frontend
+                    "https://localhost:5174", // PSP Frontend (HTTPS)
+                    "https://localhost:5173", // WebShop Frontend (HTTPS)
+                    "https://localhost:5442", // PSP Backend (HTTPS)
+                    "https://localhost:5440", // WebShop Backend (HTTPS)
+                    "https://localhost:5441"  // Bank Backend (HTTPS)
                   )
                   .AllowAnyHeader()
                   .AllowAnyMethod()
@@ -93,7 +118,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
         | ForwardedHeaders.XForwardedProto;
-    // Dozvoli sve proxy-je u Docker mreži
+    // Dozvoli sve proxy-je u Docker mreï¿½i
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
 });
@@ -108,8 +133,12 @@ builder.Services.AddSwaggerConfiguration();
 
 var app = builder.Build();
 
-// Apply migrations and seed data
-await app.ApplyMigrationsAndSeedAsync();
+// Apply migrations and seed data (samo jedna instanca u load balanced setup-u)
+var runMigrations = builder.Configuration.GetValue<bool>("RUN_MIGRATIONS", true);
+if (runMigrations)
+{
+    await app.ApplyMigrationsAndSeedAsync();
+}
 
 if (app.Environment.IsDevelopment())
 {

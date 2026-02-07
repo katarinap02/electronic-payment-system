@@ -35,7 +35,22 @@ public static class DependencyInjection
         services.AddScoped<IPaymentMethodService, PaymentMethodService>();
         services.AddScoped<PaymentService>();
 
-        services.AddHttpClient<PaymentService>();
+        // Configure HttpClient for HTTPS communication with Bank and PayPal
+        services.AddHttpClient<PaymentService>()
+            .ConfigurePrimaryHttpMessageHandler(() =>
+            {
+                var handler = new HttpClientHandler();
+                
+                // For development: Accept self-signed certificates
+                var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+                if (environment == "Development")
+                {
+                    handler.ServerCertificateCustomValidationCallback = 
+                        HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                }
+                
+                return handler;
+            });
 
         return services;
     }

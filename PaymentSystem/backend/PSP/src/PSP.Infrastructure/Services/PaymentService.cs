@@ -95,7 +95,7 @@ public class PaymentService
         var createdPayment = await _paymentRepository.CreateAsync(payment);
 
         // Generate payment URL with access token
-        var pspFrontendUrl = _configuration["PSPFrontendUrl"] ?? "http://localhost:5174";
+        var pspFrontendUrl = _configuration["PSPFrontendUrl"] ?? "https://localhost:5174";
         var paymentUrl = $"{pspFrontendUrl}/payment/{createdPayment.Id}?token={accessToken}";
 
         // Update payment with URL
@@ -177,8 +177,8 @@ public class PaymentService
 
         // Prepare data for frontend to call Bank API
         var stan = $"PSP-{payment.Id}-{DateTime.UtcNow.Ticks}";
-        var pspBackendUrl = _configuration["PSPBackendUrl"] ?? "http://localhost:5002";
-        var pspFrontendUrl = _configuration["PSPFrontendUrl"] ?? "http://localhost:5174";
+        var pspBackendUrl = _configuration["PSPBackendUrl"] ?? "https://localhost:5442";
+        var pspFrontendUrl = _configuration["PSPFrontendUrl"] ?? "https://localhost:5174";
 
         //BACK POZIVA BACK ZBOG SIGURNIH KLJUCEVA
         if (paymentMethod.Code == "PAYPAL")
@@ -290,7 +290,7 @@ public class PaymentService
         try
         {
             var bankConfig = _configuration.GetSection("BankSettings:TestBank");
-            var baseUrl = bankConfig["BaseUrl"] ?? "http://localhost:5001";
+            var baseUrl = bankConfig["BaseUrl"] ?? "https://localhost:5441";
             var merchantId = bankConfig["MerchantId"];
             var secretKey = bankConfig["SecretKey"];
 
@@ -348,7 +348,7 @@ public class PaymentService
         try
         {
             var payPalConfig = _configuration.GetSection("PayPalSettings");
-            var baseUrl = payPalConfig["ApiUrl"] ?? "http://localhost:5003";
+            var baseUrl = payPalConfig["ApiUrl"] ?? "https://localhost:5443";
 
             var requestBody = System.Text.Json.JsonSerializer.Serialize(requestData);
 
@@ -520,7 +520,7 @@ public class PaymentService
 
         // Pozovi PayPal mikroservis da capture-uje
         var payPalConfig = _configuration.GetSection("PayPalSettings");
-        var baseUrl = payPalConfig["ApiUrl"] ?? "http://localhost:5003";
+        var baseUrl = payPalConfig["ApiUrl"] ?? "https://localhost:5443";
 
         var captureRequest = new
         {
