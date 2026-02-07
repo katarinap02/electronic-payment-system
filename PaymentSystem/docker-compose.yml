@@ -101,6 +101,9 @@ services:
       - "5000:80"
     networks:
       - app-network
+    volumes:
+      - ./logs/webshop:/logs/webshop
+      - ./fim:/app/fim
 
   # Bank API 
   bank-api:
@@ -123,6 +126,9 @@ services:
       - "5001:80"
     networks:
       - app-network
+    volumes:
+      - ./logs/bank:/logs/bank
+      - ./fim:/app/fim
 
   # PSP API 
   psp-api:
@@ -149,6 +155,9 @@ services:
       - "5002:80"
     networks:
       - app-network
+    volumes:
+      - ./logs/psp:/logs/psp
+      - ./fim:/app/fim
 
   #PayPal API
   paypal-api:
@@ -174,6 +183,9 @@ services:
       - "5003:80"
     networks:
       - app-network
+    volumes:
+      - ./logs/paypal:/logs/paypal
+      - ./fim:/app/fim
 
   # Vue Frontend za WebShop
   frontend-webshop:

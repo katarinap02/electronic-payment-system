@@ -25,6 +25,9 @@ catch
 
 var builder = WebApplication.CreateBuilder(args);
 
+var logsPath = builder.Configuration["Serilog:FilePath"] ?? "/logs/bank";
+Directory.CreateDirectory(logsPath);
+
 //Serilog
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
@@ -38,6 +41,12 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
     .Enrich.WithProperty("TimeSyncStatus", timeSyncStatus)
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{ServiceName}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File(
+        path: Path.Combine(logsPath, "bank-api-.json"),
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 30,
+        restrictedToMinimumLevel: LogEventLevel.Information,
+        formatter: new Serilog.Formatting.Json.JsonFormatter())
     .WriteTo.Seq(
         serverUrl: builder.Configuration["Seq:ServerUrl"] ?? "http://seq:80",
         apiKey: builder.Configuration["Seq:ApiKey"],
@@ -66,6 +75,7 @@ builder.Services.AddScoped<CardService>();
 builder.Services.AddScoped<SeedDataService>();
 builder.Services.AddHttpClient<NbsQrCodeService>(); // HttpClient za NBS API
 builder.Services.AddHostedService<AutoCaptureBackgroundService>();
+builder.Services.AddHostedService<FileIntegrityMonitorService>();
 
 
 

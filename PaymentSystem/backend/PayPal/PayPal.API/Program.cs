@@ -23,6 +23,8 @@ catch
 }
 
 var builder = WebApplication.CreateBuilder(args);
+var logsPath = builder.Configuration["Serilog:FilePath"] ?? "/logs/paypal";
+Directory.CreateDirectory(logsPath);
 
 // Add services to the container
 builder.Services.AddControllers()
@@ -48,6 +50,12 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
     .Enrich.WithProperty("TimeSyncStatus", timeSyncStatus)
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{ServiceName}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File(
+        path: Path.Combine(logsPath, "paypal-api-.json"),
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 30,
+        restrictedToMinimumLevel: LogEventLevel.Information,
+        formatter: new Serilog.Formatting.Json.JsonFormatter())
     .WriteTo.Seq(
         serverUrl: builder.Configuration["Seq:ServerUrl"] ?? "http://seq:80",
         apiKey: builder.Configuration["Seq:ApiKey"],
@@ -68,6 +76,7 @@ builder.Services.AddScoped<PaypalTransactionRepository>();
 builder.Services.AddScoped<AuditLogRepository>();
 
 builder.Services.AddScoped<EncryptionService>();
+builder.Services.AddHostedService<FileIntegrityMonitorService>();
 
 builder.Services.AddScoped<PayPalService>();
 builder.Services.AddHttpClient();
