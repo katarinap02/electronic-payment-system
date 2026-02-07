@@ -1,0 +1,39 @@
+# Environment files (sensitive data)
+.env
+.env.local
+.env.webshop
+.env.services
+
+# But keep example templates
+!.env.example
+!.env.webshop.example
+!.env.services.example
+
+# Docker volumes
+postgres-data/
+postgres-webshop-data/
+postgres-psp-data/
+postgres-bank-data/
+postgres-paypal-data/
+seq-data/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build outputs
+**/bin/
+**/obj/
+**/publish/
+**/dist/
+**/node_modules/
