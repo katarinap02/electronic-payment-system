@@ -26,7 +26,7 @@ export default defineConfig({
     proxy: {
       // PSP proxy must be before /api to avoid being caught by /api proxy
       '/api/psp': {
-        target: 'https://psp-api:443',
+        target: 'https://psp-lb:443',
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/api\/psp/, '/api')

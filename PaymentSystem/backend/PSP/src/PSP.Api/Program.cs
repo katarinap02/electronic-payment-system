@@ -123,8 +123,12 @@ builder.Services.AddSwaggerConfiguration();
 
 var app = builder.Build();
 
-// Apply migrations and seed data
-await app.ApplyMigrationsAndSeedAsync();
+// Apply migrations and seed data (samo jedna instanca u load balanced setup-u)
+var runMigrations = builder.Configuration.GetValue<bool>("RUN_MIGRATIONS", true);
+if (runMigrations)
+{
+    await app.ApplyMigrationsAndSeedAsync();
+}
 
 if (app.Environment.IsDevelopment())
 {

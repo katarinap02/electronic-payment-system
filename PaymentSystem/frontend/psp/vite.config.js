@@ -32,7 +32,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'https://psp-api:443',
+        target: 'https://psp-lb:443',
         changeOrigin: true, 
         secure: false
       }
