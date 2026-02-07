@@ -94,7 +94,7 @@ services:
       - Https__CertificatePath=/app/certs/psp-api.pfx
       - Https__CertificatePassword=dev-cert-2024
       - BankApiUrl=https://bank-api:443
-      - WebShopApiUrl=${WEBSHOP_EXTERNAL_URL:-https://webshop-api:443}
+      - WebShopApiUrl=https://${WEBSHOP_HOST_IP}:5440
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
       - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
       - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}
@@ -124,7 +124,7 @@ services:
       - Https__CertificatePath=/app/certs/psp-api.pfx
       - Https__CertificatePassword=dev-cert-2024
       - BankApiUrl=https://bank-api:443
-      - WebShopApiUrl=${WEBSHOP_EXTERNAL_URL:-https://webshop-api:443}
+      - WebShopApiUrl=https://${WEBSHOP_HOST_IP}:5440
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
       - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
       - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}
@@ -154,7 +154,7 @@ services:
       - Https__CertificatePath=/app/certs/psp-api.pfx
       - Https__CertificatePassword=dev-cert-2024
       - BankApiUrl=https://bank-api:443
-      - WebShopApiUrl=${WEBSHOP_EXTERNAL_URL:-https://webshop-api:443}
+      - WebShopApiUrl=https://${WEBSHOP_HOST_IP}:5440
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
       - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
       - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}

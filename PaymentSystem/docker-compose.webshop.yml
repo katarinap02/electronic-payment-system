@@ -39,7 +39,7 @@ services:
       - ASPNETCORE_URLS=https://+:443
       - Https__CertificatePath=/app/certs/webshop-api.pfx
       - Https__CertificatePassword=dev-cert-2024
-      - PSP__ApiUrl=${PSP_EXTERNAL_URL:-https://psp-lb:443}/api
+      - PSP__ApiUrl=https://${SERVICES_HOST_IP}:5442/api
       - PSP__MerchantId=${PSP_MERCHANT_ID}
       - PSP__ApiKey=${PSP_API_KEY}
       - Jwt__SecretKey=${JWT_SECRET_KEY}
@@ -59,7 +59,7 @@ services:
     depends_on:
       - webshop-api
     environment:
-      - VITE_PSP_API_URL=${PSP_EXTERNAL_URL:-https://psp-lb:443}/api
+      - VITE_PSP_API_URL=https://${SERVICES_HOST_IP}:5442/api
       - VITE_WEBSHOP_API_URL=https://webshop-api:443/api
     volumes:
       - ./certs:/app/certs:ro
