@@ -1,0 +1,287 @@
+# Services Stack - PSP, Bank, PayPal, Seq i njihove baze
+# Pokreće se na drugom računaru
+
+version: '3.8'
+
+services:
+  # PostgreSQL baza za PSP
+  postgres-psp:
+    image: postgres:15-alpine
+    container_name: psp-db
+    environment:
+      - POSTGRES_DB=psp
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PSP_PASSWORD}
+    volumes:
+      - postgres-psp-data:/var/lib/postgresql/data
+    networks:
+      - services-network
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d psp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL baza za Bank
+  postgres-bank:
+    image: postgres:15-alpine
+    container_name: bank-db
+    environment:
+      - POSTGRES_DB=bank
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_BANK_PASSWORD}
+    volumes:
+      - postgres-bank-data:/var/lib/postgresql/data
+    networks:
+      - services-network
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bank"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL baza za PayPal
+  postgres-paypal:
+    image: postgres:15-alpine
+    container_name: paypal-db
+    environment:
+      - POSTGRES_DB=paypal
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PAYPAL_PASSWORD}
+    volumes:
+      - postgres-paypal-data:/var/lib/postgresql/data
+    networks:
+      - services-network
+    ports:
+      - "5436:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d paypal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Seq centralizovani logging
+  seq:
+    image: datalust/seq:latest
+    container_name: seq
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_API_KEY=${SEQ_API_KEY}
+    volumes:
+      - seq-data:/data
+    networks:
+      - services-network
+    ports:
+      - "5341:80"
+
+  # PSP API Instance 1
+  psp-api-1:
+    build:
+      context: ./backend/PSP
+      dockerfile: Dockerfile
+    container_name: psp-api-1
+    depends_on:
+      postgres-psp:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres-psp;Database=psp;Username=postgres;Password=${POSTGRES_PSP_PASSWORD};Port=5432
+      - ASPNETCORE_URLS=https://+:443
+      - Https__CertificatePath=/app/certs/psp-api.pfx
+      - Https__CertificatePassword=dev-cert-2024
+      - BankApiUrl=https://bank-api:443
+      - WebShopApiUrl=${WEBSHOP_EXTERNAL_URL:-https://webshop-api:443}
+      - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
+      - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
+      - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}
+      - Jwt__SecretKey=${JWT_SECRET_KEY}
+      - Seq__ServerUrl=http://seq:80
+      - Seq__ApiKey=${SEQ_API_KEY}
+      - INSTANCE_ID=1
+      - RUN_MIGRATIONS=true
+    volumes:
+      - ./certs:/app/certs:ro
+    networks:
+      - services-network
+
+  # PSP API Instance 2
+  psp-api-2:
+    build:
+      context: ./backend/PSP
+      dockerfile: Dockerfile
+    container_name: psp-api-2
+    depends_on:
+      postgres-psp:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres-psp;Database=psp;Username=postgres;Password=${POSTGRES_PSP_PASSWORD};Port=5432
+      - ASPNETCORE_URLS=https://+:443
+      - Https__CertificatePath=/app/certs/psp-api.pfx
+      - Https__CertificatePassword=dev-cert-2024
+      - BankApiUrl=https://bank-api:443
+      - WebShopApiUrl=${WEBSHOP_EXTERNAL_URL:-https://webshop-api:443}
+      - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
+      - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
+      - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}
+      - Jwt__SecretKey=${JWT_SECRET_KEY}
+      - Seq__ServerUrl=http://seq:80
+      - Seq__ApiKey=${SEQ_API_KEY}
+      - INSTANCE_ID=2
+      - RUN_MIGRATIONS=false
+    volumes:
+      - ./certs:/app/certs:ro
+    networks:
+      - services-network
+
+  # PSP API Instance 3
+  psp-api-3:
+    build:
+      context: ./backend/PSP
+      dockerfile: Dockerfile
+    container_name: psp-api-3
+    depends_on:
+      postgres-psp:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres-psp;Database=psp;Username=postgres;Password=${POSTGRES_PSP_PASSWORD};Port=5432
+      - ASPNETCORE_URLS=https://+:443
+      - Https__CertificatePath=/app/certs/psp-api.pfx
+      - Https__CertificatePassword=dev-cert-2024
+      - BankApiUrl=https://bank-api:443
+      - WebShopApiUrl=${WEBSHOP_EXTERNAL_URL:-https://webshop-api:443}
+      - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
+      - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
+      - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}
+      - Jwt__SecretKey=${JWT_SECRET_KEY}
+      - Seq__ServerUrl=http://seq:80
+      - Seq__ApiKey=${SEQ_API_KEY}
+      - INSTANCE_ID=3
+      - RUN_MIGRATIONS=false
+    volumes:
+      - ./certs:/app/certs:ro
+    networks:
+      - services-network
+
+  # PSP Load Balancer (Nginx)
+  psp-lb:
+    build:
+      context: ./backend/PSP
+      dockerfile: Dockerfile.nginx
+    container_name: psp-lb
+    depends_on:
+      - psp-api-1
+      - psp-api-2
+      - psp-api-3
+    ports:
+      - "5442:443"   # HTTPS
+      - "5448:8080"  # Nginx status monitoring
+    volumes:
+      - ./certs:/etc/nginx/certs  # RW - nginx generiše PEM sertifikate iz PFX
+    networks:
+      - services-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/nginx_status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Bank API
+  bank-api:
+    build:
+      context: ./backend
+      dockerfile: Bank/Bank.API/Dockerfile
+    container_name: bank-api
+    depends_on:
+      postgres-bank:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres-bank;Database=bank;Username=postgres;Password=${POSTGRES_BANK_PASSWORD};Port=5432
+      - ASPNETCORE_URLS=https://+:443
+      - Https__CertificatePath=/app/certs/bank-api.pfx
+      - Https__CertificatePassword=dev-cert-2024
+      - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
+      - Jwt__SecretKey=${JWT_SECRET_KEY}
+      - Seq__ServerUrl=http://seq:80
+      - Seq__ApiKey=${SEQ_API_KEY}
+    volumes:
+      - ./certs:/app/certs:ro
+    networks:
+      - services-network
+    ports:
+      - "5441:443"  # HTTPS
+
+  # PayPal API
+  paypal-api:
+    build:
+      context: ./backend
+      dockerfile: PayPal/PayPal.API/Dockerfile
+    container_name: paypal-api
+    depends_on:
+      postgres-paypal:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres-paypal;Database=paypal;Username=postgres;Password=${POSTGRES_PAYPAL_PASSWORD};Port=5432
+      - ASPNETCORE_URLS=https://+:443
+      - Https__CertificatePath=/app/certs/paypal-api.pfx
+      - Https__CertificatePassword=dev-cert-2024
+      - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID}
+      - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET}
+      - Jwt__SecretKey=${JWT_SECRET_KEY}
+      - Seq__ServerUrl=http://seq:80
+      - Seq__ApiKey=${SEQ_API_KEY}
+    volumes:
+      - ./certs:/app/certs:ro
+    networks:
+      - services-network
+    ports:
+      - "5443:443"  # HTTPS
+
+  # PSP Frontend
+  frontend-psp:
+    build:
+      context: ./frontend/psp
+      dockerfile: Dockerfile
+    container_name: frontend-psp
+    depends_on:
+      - psp-lb
+    volumes:
+      - ./certs/localhost+2.pem:/app/certs/localhost+2.pem:ro
+      - ./certs/localhost+2-key.pem:/app/certs/localhost+2-key.pem:ro
+    networks:
+      - services-network
+    ports:
+      - "5174:5174"  # HTTPS
+
+  # Bank Frontend
+  frontend-bank:
+    build:
+      context: ./frontend/bank
+      dockerfile: Dockerfile
+    container_name: frontend-bank
+    depends_on:
+      - bank-api
+    volumes:
+      - ./certs/localhost+2.pem:/app/certs/localhost+2.pem:ro
+      - ./certs/localhost+2-key.pem:/app/certs/localhost+2-key.pem:ro
+    networks:
+      - services-network
+    ports:
+      - "5172:5172"  # HTTPS
+
+networks:
+  services-network:
+    driver: bridge
+
+volumes:
+  postgres-psp-data:
+  postgres-bank-data:
+  postgres-paypal-data:
+  seq-data:
