@@ -284,7 +284,6 @@ services:
     networks:
       - app-network
 
-
   # Vue Frontend za WebShop
   frontend-webshop:
     build:
@@ -342,7 +341,7 @@ services:
   #Seq za logove
   seq:
     image: datalust/seq:latest
-    container_name: seq-server
+    container_name: seq
     environment:
       - ACCEPT_EULA=Y
       - SEQ_FIRSTRUN_ADMINPASSWORD=${SEQ_ADMIN_PASSWORD}

@@ -65,7 +65,9 @@ services:
     container_name: seq
     environment:
       - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_ADMINPASSWORD=${SEQ_ADMIN_PASSWORD}
       - SEQ_API_KEY=${SEQ_API_KEY}
+      - SEQ_RETENTIONPOLICY_DEFAULT=365d
     volumes:
       - seq-data:/data
     networks:
@@ -102,6 +104,8 @@ services:
       - RUN_MIGRATIONS=true
     volumes:
       - ./certs:/app/certs:ro
+      - ./logs/psp:/logs/psp
+      - ./fim:/app/fim
     networks:
       - services-network
 
@@ -134,6 +138,8 @@ services:
       - RUN_MIGRATIONS=false
     volumes:
       - ./certs:/app/certs:ro
+      - ./logs/psp:/logs/psp
+      - ./fim:/app/fim
     networks:
       - services-network
 
@@ -166,6 +172,8 @@ services:
       - RUN_MIGRATIONS=false
     volumes:
       - ./certs:/app/certs:ro
+      - ./logs/psp:/logs/psp
+      - ./fim:/app/fim
     networks:
       - services-network
 
@@ -216,6 +224,8 @@ services:
       - Seq__ApiKey=${SEQ_API_KEY}
     volumes:
       - ./certs:/app/certs:ro
+      - ./logs/bank:/logs/bank
+      - ./fim:/app/fim
     networks:
       - services-network
     ports:
@@ -244,6 +254,8 @@ services:
       - Seq__ApiKey=${SEQ_API_KEY}
     volumes:
       - ./certs:/app/certs:ro
+      - ./logs/paypal:/logs/paypal
+      - ./fim:/app/fim
     networks:
       - services-network
     ports:
