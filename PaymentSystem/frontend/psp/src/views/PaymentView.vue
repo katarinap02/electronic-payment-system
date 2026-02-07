@@ -139,8 +139,8 @@ const selectPaymentMethod = async (paymentMethodId) => {
     
     // console.log('Bank Response:', bankResponse.data)
     
-    // Step 3: Redirect to bank payment form
-    const redirectUrl = pspResponse.data.bankPaymentUrl || pspResponse.data.approvalUrl || pspResponse.data.redirectUrl
+    // Step 3: Redirect to payment provider (Bank, PayPal, or Crypto)
+    const redirectUrl = pspResponse.data.bankPaymentUrl || pspResponse.data.approvalUrl || pspResponse.data.cryptoPaymentUrl || pspResponse.data.redirectUrl
     if (redirectUrl) {
       window.location.href = redirectUrl
     } else {
@@ -212,12 +212,32 @@ onMounted(async () => {
     }
   }
   
-  // 4. Normalno učitavanje (ima validan PSP token - 32 hex)
+  // 4. Crypto Callback (ima status i txHash parametar)
+  else if (route.query.status && route.query.txHash) {
+    try {
+      const cryptoStatus = route.query.status
+      const txHash = route.query.txHash
+      
+      const response = await axios.get(`http://localhost:5002/api/payments/${route.params.id}/crypto-callback`, {
+        params: { status: cryptoStatus, txHash: txHash }
+      })
+      
+      if (response.data && response.data.redirectUrl) {
+        window.location.href = response.data.redirectUrl
+        return
+      }
+    } catch (err) {
+      console.error('Failed to process Crypto callback:', err)
+      error.value = 'Failed to process Crypto payment'
+    }
+  }
+  
+  // 5. Normalno učitavanje (ima validan PSP token - 32 hex)
   else if (isPspToken) {
     await loadPaymentDetails()
   }
   
-  // 5. Nema tokena ili nešto ne valja
+  // 6. Nema tokena ili nešto ne valja
   else {
     error.value = 'Invalid or missing payment link'
     loading.value = false

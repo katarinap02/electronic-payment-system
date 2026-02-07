@@ -11,7 +11,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /webapp
 COPY --from=build /output .
 
-COPY --from=build /build/PayPal/PayPal.API/Migrations ./Migrations/
+# COPY --from=build /build/PayPal/PayPal.API/Migrations ./Migrations/
 
 ENV PATH="$PATH:/root/.dotnet/tools"
 

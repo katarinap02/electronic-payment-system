@@ -102,12 +102,17 @@ const createRentalFromPayment = async () => {
       console.warn('Order ID mismatch:', route.query.orderId, 'vs', pendingRental.orderId);
     }
 
-    // Extract payment ID from route query
-    const paymentId = route.query.bankPaymentId || `PAY_${Date.now()}`;
+    // Extract payment ID from route query (supports both bank and crypto payments)
+    const paymentId = route.query.bankPaymentId || route.query.cryptoPaymentId || `PAY_${Date.now()}`;
     
-    // Get payment method from PSP query parameter (now always provided by PSP backend)
+    // Get global transaction ID (bank transaction ID or crypto txHash)
+    const globalTransactionId = route.query.bankPaymentId || route.query.txHash || null;
+    
+    // Get payment method from query parameter
     const paymentMethod = route.query.paymentMethod || 'CreditCard';
-    console.log('Payment method from PSP:', paymentMethod);
+    console.log('Payment method:', paymentMethod);
+    console.log('Payment ID:', paymentId);
+    console.log('Global Transaction ID:', globalTransactionId);
     
     // Konvertuj datume u ISO 8601 format sa UTC time zone
     const formatDateToUTC = (dateString) => {
@@ -131,6 +136,7 @@ const createRentalFromPayment = async () => {
       totalPrice: pendingRental.totalPrice,
       currency: pendingRental.currency,
       paymentId: paymentId,
+      globalTransactionId: globalTransactionId,
       paymentMethod: paymentMethod
     };
 

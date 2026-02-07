@@ -1,0 +1,9 @@
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
+WORKDIR /webapp
+
+# Copy the published files
+COPY publish/ .
+
+EXPOSE 80
+
+ENTRYPOINT ["dotnet", "Crypto.API.dll"]

@@ -173,6 +173,44 @@ public class PaymentService
                 throw new InvalidOperationException($"Failed to initiate PayPal payment: {ex.Message}");
             }
         }
+        else if (paymentMethod.Code == "CRYPTO")
+        {
+            try
+            {
+                var cryptoRequest = new
+                {
+                    PspTransactionId = payment.Id.ToString(),
+                    Amount = payment.Amount,
+                    Currency = payment.Currency.ToString(),
+                    MerchantId = webShop.MerchantId,
+                    ReturnUrl = $"{pspFrontendUrl}/payment/{payment.Id}",
+                    CancelUrl = $"{pspFrontendUrl}/payment/{payment.Id}?status=cancelled"
+                };
+
+                var cryptoResponse = await CallCryptoApiAsync(cryptoRequest);
+
+                payment.PaymentUrl = cryptoResponse.PaymentUrl;
+                await _paymentRepository.UpdateAsync(payment);
+
+                return new PaymentMethodSelectionResponse
+                {
+                    MerchantId = webShop.MerchantId,
+                    Amount = payment.Amount,
+                    Currency = payment.Currency.ToString(),
+                    CryptoPaymentUrl = cryptoResponse.PaymentUrl,
+                    WalletAddress = cryptoResponse.WalletAddress,
+                    AmountInCrypto = cryptoResponse.AmountInEth,
+                    ExchangeRate = cryptoResponse.ExchangeRate,
+                    CryptoExpiresAt = cryptoResponse.ExpiresAt
+                };
+            }
+            catch (Exception ex)
+            {
+                payment.Status = PaymentStatus.Failed;
+                await _paymentRepository.UpdateAsync(payment);
+                throw new InvalidOperationException($"Failed to initiate Crypto payment: {ex.Message}");
+            }
+        }
         else
         {
 
@@ -332,6 +370,54 @@ public class PaymentService
         }
     }
 
+    private async Task<CryptoCreatePaymentResponse> CallCryptoApiAsync(object requestData)
+    {
+        try
+        {
+            var cryptoConfig = _configuration.GetSection("CryptoSettings");
+            var baseUrl = cryptoConfig["ApiUrl"] ?? "http://localhost:5004";
+
+            var requestBody = System.Text.Json.JsonSerializer.Serialize(requestData);
+
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/crypto/create-payment")
+            {
+                Content = new StringContent(requestBody, System.Text.Encoding.UTF8, "application/json")
+            };
+
+            httpRequest.Headers.Add("X-Request-ID", Guid.NewGuid().ToString());
+
+            var response = await _httpClient.SendAsync(httpRequest);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Crypto API error: {StatusCode}, Response: {Content}",
+                    response.StatusCode, responseContent);
+                throw new HttpRequestException($"Crypto API returned {response.StatusCode}");
+            }
+
+            var options = new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+            };
+
+            var cryptoResponse = System.Text.Json.JsonSerializer.Deserialize<CryptoCreatePaymentResponse>(responseContent, options);
+
+            if (cryptoResponse == null)
+            {
+                throw new InvalidOperationException("Crypto response deserialization failed");
+            }
+
+            return cryptoResponse;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling Crypto API");
+            throw;
+        }
+    }
+
     // DODAJ OVU KLASU
     public class BankPaymentResponse
     {
@@ -345,6 +431,17 @@ public class PaymentService
     {
         public string PayPalOrderId { get; set; } = string.Empty;
         public string ApprovalUrl { get; set; } = string.Empty;  
+        public string Status { get; set; } = string.Empty;
+    }
+
+    public class CryptoCreatePaymentResponse
+    {
+        public string CryptoPaymentId { get; set; } = string.Empty;
+        public string PaymentUrl { get; set; } = string.Empty;
+        public string WalletAddress { get; set; } = string.Empty;
+        public decimal AmountInEth { get; set; }
+        public decimal ExchangeRate { get; set; }
+        public DateTime ExpiresAt { get; set; }
         public string Status { get; set; } = string.Empty;
     }
 
@@ -362,6 +459,11 @@ public class PaymentService
         public string BankPaymentUrl { get; set; } = string.Empty;
         public string ApprovalUrl { get; set; } = string.Empty;
         public string PayPalOrderId { get; set; } = string.Empty;
+        public string CryptoPaymentUrl { get; set; } = string.Empty;
+        public string WalletAddress { get; set; } = string.Empty;
+        public decimal AmountInCrypto { get; set; }
+        public decimal ExchangeRate { get; set; }
+        public DateTime CryptoExpiresAt { get; set; }
     }
 
     public async Task CancelPaymentAsync(int paymentId)
@@ -486,6 +588,36 @@ public class PaymentService
         if (payment.Status == PaymentStatus.Success)
         {
             return $"{webShop.SuccessUrl}?paymentId={paymentId}&orderId={payment.MerchantOrderId}&amount={payment.Amount}&currency={payment.Currency}&paymentMethod=PAYPAL";
+        }
+        else
+        {
+            return $"{webShop.FailedUrl}?paymentId={paymentId}&orderId={payment.MerchantOrderId}";
+        }
+    }
+
+    public async Task<string> HandleCryptoCallbackAsync(int paymentId, string status, string? txHash)
+    {
+        var payment = await _paymentRepository.GetByIdAsync(paymentId);
+        if (payment == null) throw new InvalidOperationException("Payment not found");
+
+        var webShop = await _webShopRepository.GetByIdAsync(payment.WebShopId);
+        if (webShop == null) throw new InvalidOperationException("WebShop not found");
+
+        // Ažuriraj status
+        if (status.ToLower() == "success")
+        {
+            payment.Status = PaymentStatus.Success;
+        }
+        else
+        {
+            payment.Status = PaymentStatus.Failed;
+        }
+        await _paymentRepository.UpdateAsync(payment);
+
+        // Generiši redirect URL ka merchantu
+        if (payment.Status == PaymentStatus.Success)
+        {
+            return $"{webShop.SuccessUrl}?paymentId={paymentId}&orderId={payment.MerchantOrderId}&amount={payment.Amount}&currency={payment.Currency}&paymentMethod=CRYPTO&txHash={txHash}";
         }
         else
         {

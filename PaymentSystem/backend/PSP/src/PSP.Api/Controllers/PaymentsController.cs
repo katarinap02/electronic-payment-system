@@ -151,6 +151,20 @@ public class PaymentsController : ControllerBase
             return StatusCode(500, new { message = "Error processing PayPal callback", error = ex.Message });
         }
     }
+
+    [HttpGet("{id}/crypto-callback")]
+    public async Task<ActionResult> HandleCryptoCallback(int id, [FromQuery] string status, [FromQuery] string? txHash)
+    {
+        try
+        {
+            var redirectUrl = await _paymentService.HandleCryptoCallbackAsync(id, status, txHash);
+            return Ok(new { redirectUrl });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Error processing Crypto callback", error = ex.Message });
+        }
+    }
 }
 
 public record SelectPaymentMethodRequest(int PaymentMethodId);
