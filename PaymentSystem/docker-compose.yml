@@ -90,13 +90,14 @@ services:
         condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__WebShopDb=Host=postgres-webshop;Database=webshop;Username=postgres;Password=${POSTGRES_WEBSHOP_PASSWORD};Port=5432
+      - ConnectionStrings__DefaultConnection=Host=postgres-webshop;Database=webshop;Username=postgres;Password=${POSTGRES_WEBSHOP_PASSWORD};Port=5432
       - ASPNETCORE_URLS=https://+:443
       - Https__CertificatePath=/app/certs/webshop-api.pfx
       - Https__CertificatePassword=dev-cert-2024
-      - Jwt__SecretKey=${WEBSHOP_JWT_SECRET_KEY}        
-      - PSP__MerchantId=${WEBSHOP_MERCHANT_ID}          
-      - PSP__MerchantPassword=${WEBSHOP_MERCHANT_PASSWORD}
+      - PSP__ApiUrl=https://psp-lb:443/api
+      - PSP__MerchantId=${PSP_MERCHANT_ID}
+      - PSP__ApiKey=${PSP_API_KEY}
+      - Jwt__SecretKey=${JWT_SECRET_KEY}
       - Seq__ServerUrl=http://seq:80
       - Seq__ApiKey=${SEQ_API_KEY}
     ports:
@@ -119,12 +120,15 @@ services:
         condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__BankDb=Host=postgres-bank;Database=bank;Username=postgres;Password=${POSTGRES_BANK_PASSWORD};Port=5432
+      - ConnectionStrings__DefaultConnection=Host=postgres-bank;Database=bank;Username=postgres;Password=${POSTGRES_BANK_PASSWORD};Port=5432
       - ASPNETCORE_URLS=https://+:443
       - Https__CertificatePath=/app/certs/bank-api.pfx
       - Https__CertificatePassword=dev-cert-2024
-      - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
+      - PaymentSettings__BaseUrl=https://localhost:5172
+      - PSPFrontendUrl=https://localhost:5174
       - HmacSettings__SecretKey=${BANK_HMAC_SECRET}
+      - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
+      - Jwt__SecretKey=${JWT_SECRET_KEY}
       - Seq__ServerUrl=http://seq:80
       - Seq__ApiKey=${SEQ_API_KEY}
     ports:
@@ -154,6 +158,8 @@ services:
       - Https__CertificatePassword=dev-cert-2024
       - BankApiUrl=https://bank-api:443
       - WebShopApiUrl=https://webshop-api:443
+      - WebShopFrontendUrl=https://localhost:5173
+      - PSPFrontendUrl=https://localhost:5174
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
       - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
       - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}
@@ -187,6 +193,8 @@ services:
       - Https__CertificatePassword=dev-cert-2024
       - BankApiUrl=https://bank-api:443
       - WebShopApiUrl=https://webshop-api:443
+      - WebShopFrontendUrl=https://localhost:5173
+      - PSPFrontendUrl=https://localhost:5174
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
       - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
       - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}
@@ -197,6 +205,8 @@ services:
       - RUN_MIGRATIONS=false
     volumes:
       - ./certs:/app/certs:ro
+      - ./logs/psp:/logs/psp
+      - ./fim:/app/fim
     networks:
       - app-network
 
@@ -217,6 +227,8 @@ services:
       - Https__CertificatePassword=dev-cert-2024
       - BankApiUrl=https://bank-api:443
       - WebShopApiUrl=https://webshop-api:443
+      - WebShopFrontendUrl=https://localhost:5173
+      - PSPFrontendUrl=https://localhost:5174
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
       - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
       - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}
@@ -227,6 +239,8 @@ services:
       - RUN_MIGRATIONS=false
     volumes:
       - ./certs:/app/certs:ro
+      - ./logs/psp:/logs/psp
+      - ./fim:/app/fim
     networks:
       - app-network
 
@@ -270,9 +284,8 @@ services:
       - Https__CertificatePassword=dev-cert-2024
       - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID}
       - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET}
-      - PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com 
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-      - LOG_LEVEL=Information
+      - Jwt__SecretKey=${JWT_SECRET_KEY}
       - Seq__ServerUrl=http://seq:80
       - Seq__ApiKey=${SEQ_API_KEY}
     ports:
@@ -290,14 +303,17 @@ services:
       context: ./frontend/webshop
       dockerfile: Dockerfile
     container_name: frontend-webshop
+    depends_on:
+      - webshop-api
+    environment:
+      - VITE_PSP_API_URL=https://psp-lb:443/api
+      - VITE_WEBSHOP_API_URL=https://webshop-api:443/api
     ports:
       - "5173:5173"
     volumes:
       - ./frontend/webshop:/app
       - ./certs:/app/certs:ro
       - /app/node_modules
-    depends_on:
-      - webshop-api
     command: npm run dev -- --host 0.0.0.0
     networks:
       - app-network
@@ -308,14 +324,16 @@ services:
       context: ./frontend/bank
       dockerfile: Dockerfile
     container_name: frontend-bank
+    depends_on:
+      - bank-api
+    environment:
+      - VITE_BANK_API_URL=https://bank-api:443/api
     ports:
       - "5172:5172"
     volumes:
       - ./frontend/bank:/app
       - ./certs:/app/certs:ro
       - /app/node_modules
-    depends_on:
-      - bank-api
     command: npm run dev -- --host 0.0.0.0
     networks:
       - app-network
@@ -326,14 +344,17 @@ services:
       context: ./frontend/psp
       dockerfile: Dockerfile
     container_name: frontend-psp
+    depends_on:
+      - psp-lb
+    environment:
+      - VITE_PSP_API_URL=https://psp-lb:443/api
+      - VITE_WEBSHOP_FRONTEND_URL=https://localhost:5173
     ports:
       - "5174:5174"
     volumes:
       - ./frontend/psp:/app
       - ./certs:/app/certs:ro
       - /app/node_modules
-    depends_on:
-      - psp-lb
     command: npm run dev -- --host 0.0.0.0
     networks:
       - app-network
@@ -345,11 +366,12 @@ services:
     environment:
       - ACCEPT_EULA=Y
       - SEQ_FIRSTRUN_ADMINPASSWORD=${SEQ_ADMIN_PASSWORD}
+      - SEQ_API_KEY=${SEQ_API_KEY}
       - SEQ_RETENTIONPOLICY_DEFAULT=365d
     ports:
       - "5341:80"      # UI dostupan na localhost:5341
     volumes:
-      - seq-data:/data
+      - ./logs/seq:/data
     networks:
       - app-network
     healthcheck:
@@ -363,7 +385,6 @@ volumes:
   postgres-bank-data:
   postgres-psp-data:
   postgres-paypal-data:
-  seq-data:
 
 networks:
   app-network:

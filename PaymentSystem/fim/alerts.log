@@ -25,3 +25,5 @@
 [2026-02-07T15:30:14.0741839Z] MISSING: /logs/paypal/paypal-api-20260207.json
 [2026-02-07T15:30:16.0102023Z] MISSING: /logs/bank/bank-api-20260207.json
 [2026-02-07T15:30:16.4891432Z] MISSING: /logs/psp/psp-20260207.json
+[2026-02-07T15:56:00.3392379Z] TAMPERED: /logs/psp/psp-20260207.json (hash changed, size 282088)
+[2026-02-07T15:57:30.4535473Z] TAMPERED: /logs/psp/psp-20260207.json (hash changed, size 358680)
