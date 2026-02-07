@@ -117,7 +117,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowPSP",
         policy =>
         {
-            policy.WithOrigins("https://localhost:5174", "https://localhost:5442", "https://localhost:5443", "https://psp-api:443")
+            policy.SetIsOriginAllowed(origin => true) // Allow any origin in development
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });

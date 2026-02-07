@@ -56,13 +56,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins(
-                    "https://localhost:5174", // PSP Frontend (HTTPS)
-                    "https://localhost:5173", // WebShop Frontend (HTTPS)
-                    "https://localhost:5442", // PSP Backend (HTTPS)
-                    "https://localhost:5440", // WebShop Backend (HTTPS)
-                    "https://localhost:5441"  // Bank Backend (HTTPS)
-                  )
+            policy.SetIsOriginAllowed(origin => true) // Allow any origin in development
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials();

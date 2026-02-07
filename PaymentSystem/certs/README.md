@@ -55,7 +55,7 @@ certs/
 
 ## 🌐 Generisanje Trusted Sertifikata za Frontend (mkcert)
 
-**Problem:** Browser-i ne veruju self-signed sertifikatima i prikazuju security upozorenja.
+**Problem:** Browser-i ne verifukuju self-signed sertifikatima i prikazuju security upozorenja.
 
 **Rešenje:** Koristite `mkcert` za generisanje lokalno trusted sertifikata.
 

@@ -7,7 +7,8 @@ RUN apk add --no-cache openssl
 # Kopiraj nginx konfiguraciju i entrypoint script
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY nginx-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh && \
+    sed -i 's/\r$//' /docker-entrypoint.sh
 
 # Kreiraj foldere za sertifikate, logove i cache
 RUN mkdir -p /etc/nginx/certs /var/log/nginx /var/cache/nginx && \

@@ -6,6 +6,15 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
+// ES modules __dirname equivalent
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// Get Bank API target from environment variable
+const getBankTarget = () => {
+  const url = process.env.VITE_BANK_API_URL || 'https://bank-api:443/api'
+  return url.replace(/\/api$/, '')
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
@@ -26,7 +35,7 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'https://bank-api:443',
+        target: getBankTarget(),
         changeOrigin: true, 
         secure: false,
       }

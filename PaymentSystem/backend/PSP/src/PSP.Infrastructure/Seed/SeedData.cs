@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PSP.Application.Interfaces.Services;
 using PSP.Domain.Entities;
@@ -8,7 +9,7 @@ namespace PSP.Infrastructure.Seed;
 
 public static class SeedData
 {
-    public static async Task SeedDatabaseAsync(IServiceProvider serviceProvider)
+    public static async Task SeedDatabaseAsync(IServiceProvider serviceProvider, IConfiguration configuration)
     {
         using var scope = serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -17,7 +18,7 @@ public static class SeedData
         await SeedSuperAdminAsync(context, passwordService);
         await SeedAdminAsync(context, passwordService);
         await SeedPaymentMethodsAsync(context);
-        await SeedWebShopsAsync(context);
+        await SeedWebShopsAsync(context, configuration);
         await SeedAdminWebshopsAsync(context);
     }
 
@@ -98,21 +99,24 @@ public static class SeedData
         }
     }
 
-    private static async Task SeedWebShopsAsync(AppDbContext context)
+    private static async Task SeedWebShopsAsync(AppDbContext context, IConfiguration configuration)
     {
         if (!context.WebShops.Any())
         {
+            // Get WebShop URL from environment variable or fallback to webshop-api
+            var webShopUrl = configuration["WebShopFrontendUrl"] ?? "https://webshop-api:443";
+            
             var webShop = new WebShop
             {
                 Name = "Car Rental WebShop",
-                Url = "https://localhost:5173",
+                Url = webShopUrl,
                 ApiKey = "webshop-api-key-change-this",
                 MerchantId = "WEBSHOP_001",
                 Status = WebShopStatus.Active,
                 CreatedAt = DateTime.UtcNow,
-                ErrorUrl = "https://localhost:5173/payment-error",
-                FailedUrl = "https://localhost:5173/payment-failed",
-                SuccessUrl = "https://localhost:5173/payment-success"
+                ErrorUrl = $"{webShopUrl}/payment-error",
+                FailedUrl = $"{webShopUrl}/payment-failed",
+                SuccessUrl = $"{webShopUrl}/payment-success"
             };
 
             context.WebShops.Add(webShop);
