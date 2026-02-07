@@ -103,8 +103,8 @@ public static class SeedData
     {
         if (!context.WebShops.Any())
         {
-            // Get WebShop URL from environment variable or fallback to localhost
-            var webShopUrl = configuration["WebShopFrontendUrl"] ?? "https://localhost:5173";
+            // Get WebShop URL from environment variable or fallback to webshop-api
+            var webShopUrl = configuration["WebShopFrontendUrl"] ?? "https://webshop-api:443";
             
             var webShop = new WebShop
             {

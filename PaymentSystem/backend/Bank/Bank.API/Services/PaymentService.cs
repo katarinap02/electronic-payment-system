@@ -616,7 +616,7 @@ namespace Bank.API.Services
         //ovo promeniti kad bude trebalo
         private string GeneratePaymentUrl(string paymentId)
         {
-            var baseUrl = _configuration["PaymentSettings:BaseUrl"] ?? "https://localhost:5172";
+            var baseUrl = _configuration["PaymentSettings:BaseUrl"] ?? "https://bank-api:443";
             return $"{baseUrl}/payment/{paymentId}";
         }
 
