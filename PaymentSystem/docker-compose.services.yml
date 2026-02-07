@@ -238,6 +238,7 @@ services:
       - Https__CertificatePassword=dev-cert-2024
       - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID}
       - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - Jwt__SecretKey=${JWT_SECRET_KEY}
       - Seq__ServerUrl=http://seq:80
       - Seq__ApiKey=${SEQ_API_KEY}
