@@ -56,8 +56,8 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy.WithOrigins(
-                    "http://localhost:5174", // PSP Frontend (HTTP)
-                    "http://localhost:5173", // WebShop Frontend (HTTP)
+                    "https://localhost:5174", // PSP Frontend (HTTPS)
+                    "https://localhost:5173", // WebShop Frontend (HTTPS)
                     "https://localhost:5442", // PSP Backend (HTTPS)
                     "https://localhost:5440", // WebShop Backend (HTTPS)
                     "https://localhost:5441"  // Bank Backend (HTTPS)

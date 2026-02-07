@@ -1,4 +1,6 @@
 import { fileURLToPath, URL } from 'node:url'
+import fs from 'fs'
+import path from 'path'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
@@ -15,6 +17,10 @@ export default defineConfig({
     },
   },
   server: {
+    https: {
+      pfx: fs.readFileSync(path.resolve(__dirname, './certs/frontend-psp.pfx')),
+      passphrase: 'dev-cert-2024'
+    },
     port: 5174,
     host: true,
     watch: {

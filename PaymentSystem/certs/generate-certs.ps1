@@ -44,15 +44,26 @@ function New-ServiceCertificate {
 }
 
 # Generiši sertifikate za sve servise
+Write-Host "`n===== Backend API Sertifikati =====" -ForegroundColor Magenta
 New-ServiceCertificate -ServiceName "PSP API" -DnsName "psp-api"
 New-ServiceCertificate -ServiceName "WebShop API" -DnsName "webshop-api"
 New-ServiceCertificate -ServiceName "Bank API" -DnsName "bank-api"
 New-ServiceCertificate -ServiceName "PayPal API" -DnsName "paypal-api"
 
+Write-Host "`n===== Frontend Sertifikati =====" -ForegroundColor Magenta
+New-ServiceCertificate -ServiceName "WebShop Frontend" -DnsName "frontend-webshop"
+New-ServiceCertificate -ServiceName "PSP Frontend" -DnsName "frontend-psp"
+New-ServiceCertificate -ServiceName "Bank Frontend" -DnsName "frontend-bank"
+
 Write-Host "`n===== Generisanje zavrseno =====" -ForegroundColor Green
 Write-Host "Lozinka za sve PFX fajlove: $password" -ForegroundColor Magenta
 Write-Host "`nGenerirani sertifikati:" -ForegroundColor White
+Write-Host "Backend API:" -ForegroundColor Yellow
 Write-Host "  - psp-api.pfx / psp-api.cer" -ForegroundColor White
 Write-Host "  - webshop-api.pfx / webshop-api.cer" -ForegroundColor White
 Write-Host "  - bank-api.pfx / bank-api.cer" -ForegroundColor White
 Write-Host "  - paypal-api.pfx / paypal-api.cer" -ForegroundColor White
+Write-Host "Frontend:" -ForegroundColor Yellow
+Write-Host "  - frontend-webshop.pfx / frontend-webshop.cer" -ForegroundColor White
+Write-Host "  - frontend-psp.pfx / frontend-psp.cer" -ForegroundColor White
+Write-Host "  - frontend-bank.pfx / frontend-bank.cer" -ForegroundColor White

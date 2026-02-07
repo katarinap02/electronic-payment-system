@@ -106,7 +106,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5174", "http://localhost:5172", "https://localhost:5441", "https://localhost:5442", "http://frontend-bank:5173")
+            policy.WithOrigins("https://localhost:5174", "https://localhost:5172", "https://localhost:5441", "https://localhost:5442", "https://frontend-bank:5172")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });

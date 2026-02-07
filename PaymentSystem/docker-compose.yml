@@ -201,6 +201,7 @@ services:
       - "5173:5173"
     volumes:
       - ./frontend/webshop:/app
+      - ./certs:/app/certs:ro
       - /app/node_modules
     environment:
       - VITE_API_URL=https://localhost:5440/api
@@ -217,9 +218,10 @@ services:
       dockerfile: Dockerfile
     container_name: frontend-bank
     ports:
-      - "5172:5173"
+      - "5172:5172"
     volumes:
       - ./frontend/bank:/app
+      - ./certs:/app/certs:ro
       - /app/node_modules
     environment:
       - VITE_API_BASE_URL=https://localhost:5441
@@ -239,6 +241,7 @@ services:
       - "5174:5174"
     volumes:
       - ./frontend/psp:/app
+      - ./certs:/app/certs:ro
       - /app/node_modules
     environment:
       - VITE_API_URL=https://localhost:5442

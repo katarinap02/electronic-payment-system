@@ -1,4 +1,6 @@
 import { fileURLToPath, URL } from 'node:url'
+import fs from 'fs'
+import path from 'path'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
@@ -15,6 +17,12 @@ export default defineConfig({
     },
   },
   server: {
+    https: {
+      pfx: fs.readFileSync(path.resolve(__dirname, './certs/frontend-webshop.pfx')),
+      passphrase: 'dev-cert-2024'
+    },
+    port: 5173,
+    host: true,
     proxy: {
       // PSP proxy must be before /api to avoid being caught by /api proxy
       '/api/psp': {
