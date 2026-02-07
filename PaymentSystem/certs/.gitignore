@@ -1,0 +1,8 @@
+# Ignore sve sertifikate osim skripte za generisanje
+*.pfx
+*.cer
+*.crt
+*.key
+*.pem
+!.gitignore
+!generate-certs.ps1

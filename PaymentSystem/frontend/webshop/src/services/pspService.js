@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-const PSP_API_URL = 'http://localhost:5002/api'
+// Use proxy instead of direct HTTPS calls to avoid certificate issues
+// Proxy is configured in vite.config.js
+const PSP_API_URL = '/api/psp'
 
 // These should match WebShop registration in PSP
 const MERCHANT_ID = 'WEBSHOP_001'

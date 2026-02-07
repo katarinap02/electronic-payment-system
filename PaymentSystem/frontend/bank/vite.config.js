@@ -1,4 +1,6 @@
 import { fileURLToPath, URL } from 'node:url'
+import fs from 'fs'
+import path from 'path'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
@@ -16,9 +18,15 @@ export default defineConfig({
     },
   },
   server: {
+    https: {
+      cert: fs.readFileSync(path.resolve(__dirname, './certs/localhost+2.pem')),
+      key: fs.readFileSync(path.resolve(__dirname, './certs/localhost+2-key.pem'))
+    },
+    port: 5172,
+    host: true,
     proxy: {
       '/api': {
-        target: 'http://bank-api:80',  //bez dokera http://localhost:5001
+        target: 'https://bank-api:443',
         changeOrigin: true, 
         secure: false,
       }
