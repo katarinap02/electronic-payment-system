@@ -9,6 +9,18 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 // ES modules __dirname equivalent
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// Read environment variables for distributed setup
+// Remove /api suffix if present to get base URL for proxy target
+const getPspTarget = () => {
+  const url = process.env.VITE_PSP_API_URL || 'https://psp-lb:443/api'
+  return url.replace(/\/api$/, '')
+}
+
+const getWebshopTarget = () => {
+  const url = process.env.VITE_WEBSHOP_API_URL || 'https://webshop-api:443/api'
+  return url.replace(/\/api$/, '')
+}
+
 export default defineConfig({
   plugins: [
     vue(),
@@ -29,13 +41,13 @@ export default defineConfig({
     proxy: {
       // PSP proxy must be before /api to avoid being caught by /api proxy
       '/api/psp': {
-        target: 'https://psp-lb:443',
+        target: getPspTarget(),
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/api\/psp/, '/api')
       },
       '/api': {
-        target: 'https://webshop-api:443',
+        target: getWebshopTarget(),
         changeOrigin: true, 
         secure: false,
       }

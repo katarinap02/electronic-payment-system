@@ -6,6 +6,15 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
+// ES modules __dirname equivalent
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// Get PSP API target from environment variable
+const getPspTarget = () => {
+  const url = process.env.VITE_PSP_API_URL || 'https://psp-lb:443/api'
+  return url.replace(/\/api$/, '')
+}
+
 export default defineConfig({
   plugins: [
     vue(),
@@ -32,7 +41,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'https://psp-lb:443',
+        target: getPspTarget(),
         changeOrigin: true, 
         secure: false
       }

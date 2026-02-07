@@ -201,6 +201,8 @@ services:
       - ASPNETCORE_URLS=https://+:443
       - Https__CertificatePath=/app/certs/bank-api.pfx
       - Https__CertificatePassword=dev-cert-2024
+      - PaymentSettings__BaseUrl=https://${SERVICES_HOST_IP}:5172
+      - PSPFrontendUrl=https://${SERVICES_HOST_IP}:5174
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
       - Jwt__SecretKey=${JWT_SECRET_KEY}
       - Seq__ServerUrl=http://seq:80
@@ -247,6 +249,9 @@ services:
     container_name: frontend-psp
     depends_on:
       - psp-lb
+    environment:
+      - VITE_PSP_API_URL=https://psp-lb:443/api
+      - VITE_WEBSHOP_FRONTEND_URL=https://${WEBSHOP_HOST_IP}:5173
     volumes:
       - ./certs/localhost+2.pem:/app/certs/localhost+2.pem:ro
       - ./certs/localhost+2-key.pem:/app/certs/localhost+2-key.pem:ro
@@ -263,6 +268,8 @@ services:
     container_name: frontend-bank
     depends_on:
       - bank-api
+    environment:
+      - VITE_BANK_API_URL=https://bank-api:443/api
     volumes:
       - ./certs/localhost+2.pem:/app/certs/localhost+2.pem:ro
       - ./certs/localhost+2-key.pem:/app/certs/localhost+2-key.pem:ro

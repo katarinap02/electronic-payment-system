@@ -58,7 +58,7 @@
         <div v-else-if="payment.status === 'Failed'" class="payment-failed-message">
           <h3>❌ Payment Failed</h3>
           <p>This payment transaction has been cancelled or failed.</p>
-          <a href="http://localhost:5173/vehicles" class="btn-return">Return to Shop</a>
+          <a :href="`${WEBSHOP_FRONTEND_URL}/vehicles`" class="btn-return">Return to Shop</a>
         </div>
       </div>
     </div>
@@ -73,6 +73,9 @@ import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const route = useRoute()
+
+// Get WebShop frontend URL from environment variable
+const WEBSHOP_FRONTEND_URL = import.meta.env.VITE_WEBSHOP_FRONTEND_URL || 'https://localhost:5173'
 
 const payment = ref(null)
 const loading = ref(false)
@@ -103,7 +106,7 @@ const loadPaymentDetails = async () => {
     // If unauthorized, redirect to error page
     debugger
     if (err.response?.status === 401) {
-      window.location.href = 'https://localhost:5173/payment-error?errorCode=UNAUTHORIZED&errorMessage=Invalid or expired payment link'
+      window.location.href = `${WEBSHOP_FRONTEND_URL}/payment-error?errorCode=UNAUTHORIZED&errorMessage=Invalid or expired payment link`
     }
   } finally {
     loading.value = false
@@ -224,7 +227,7 @@ onMounted(async () => {
   }
 })
 const goBackToShop = () => {
-  window.location.href = 'https://localhost:5173/vehicles'
+  window.location.href = `${WEBSHOP_FRONTEND_URL}/vehicles`
 }
 </script>
 
