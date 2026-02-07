@@ -25,6 +25,34 @@ Ova skripta će kreirati sertifikate za sve backend servise:
 
 ---
 
+## 🔄 PSP Load Balancer - Automatska Konverzija Sertifikata
+
+**PSP Nginx Load Balancer** automatski konvertuje `psp-api.pfx` u PEM format pri pokretanju.
+
+### Kako radi
+
+Kada pokrenete `docker compose up --build -d`:
+
+1. Nginx kontejner se pokreće sa `nginx-entrypoint.sh`
+2. Entrypoint proverava da li postoje `psp-api-nginx.crt` i `psp-api-nginx.key`
+3. Ako ne postoje, automatski konvertuje `psp-api.pfx` → PEM format
+4. Generiše fajlove u `./certs/` folderu (perzistentni):
+   - `psp-api-nginx.crt` - Javni sertifikat
+   - `psp-api-nginx.key` - Privatni ključ (bez lozinke)
+
+### Rezultat
+
+```
+certs/
+├── psp-api.pfx              # Originalni PFX (generiše generate-certs.ps1)
+├── psp-api-nginx.crt        # ✅ Auto-generisano od nginx-entrypoint.sh
+└── psp-api-nginx.key        # ✅ Auto-generisano od nginx-entrypoint.sh
+```
+
+**Napomena:** PEM fajlovi se generišu samo prvi put. Posle toga se ponovo koriste.
+
+---
+
 ## 🌐 Generisanje Trusted Sertifikata za Frontend (mkcert)
 
 **Problem:** Browser-i ne veruju self-signed sertifikatima i prikazuju security upozorenja.
