@@ -91,14 +91,18 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__WebShopDb=Host=postgres-webshop;Database=webshop;Username=postgres;Password=${POSTGRES_WEBSHOP_PASSWORD};Port=5432
-      - ASPNETCORE_URLS=http://+:80
+      - ASPNETCORE_URLS=https://+:443
+      - Https__CertificatePath=/app/certs/webshop-api.pfx
+      - Https__CertificatePassword=dev-cert-2024
       - Jwt__SecretKey=${WEBSHOP_JWT_SECRET_KEY}        
       - PSP__MerchantId=${WEBSHOP_MERCHANT_ID}          
       - PSP__MerchantPassword=${WEBSHOP_MERCHANT_PASSWORD}
       - Seq__ServerUrl=http://seq:80
       - Seq__ApiKey=${SEQ_API_KEY}
     ports:
-      - "5000:80"
+      - "5440:443"
+    volumes:
+      - ./certs:/app/certs:ro
     networks:
       - app-network
 
@@ -114,13 +118,17 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__BankDb=Host=postgres-bank;Database=bank;Username=postgres;Password=${POSTGRES_BANK_PASSWORD};Port=5432
-      - ASPNETCORE_URLS=http://+:80
+      - ASPNETCORE_URLS=https://+:443
+      - Https__CertificatePath=/app/certs/bank-api.pfx
+      - Https__CertificatePassword=dev-cert-2024
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
       - HmacSettings__SecretKey=${BANK_HMAC_SECRET}
       - Seq__ServerUrl=http://seq:80
       - Seq__ApiKey=${SEQ_API_KEY}
     ports:
-      - "5001:80"
+      - "5441:443"
+    volumes:
+      - ./certs:/app/certs:ro
     networks:
       - app-network
 
@@ -136,9 +144,11 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres-psp;Database=psp;Username=postgres;Password=${POSTGRES_PSP_PASSWORD};Port=5432
-      - ASPNETCORE_URLS=http://+:80
-      - BankApiUrl=http://bank-api:80
-      - WebShopApiUrl=http://webshop-api:80
+      - ASPNETCORE_URLS=https://+:443
+      - Https__CertificatePath=/app/certs/psp-api.pfx
+      - Https__CertificatePassword=dev-cert-2024
+      - BankApiUrl=https://bank-api:443
+      - WebShopApiUrl=https://webshop-api:443
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
       - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
       - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}
@@ -146,7 +156,9 @@ services:
       - Seq__ServerUrl=http://seq:80
       - Seq__ApiKey=${SEQ_API_KEY}
     ports:
-      - "5002:80"
+      - "5442:443"
+    volumes:
+      - ./certs:/app/certs:ro
     networks:
       - app-network
 
@@ -162,7 +174,9 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres-paypal;Database=paypal;Username=postgres;Password=${POSTGRES_PAYPAL_PASSWORD};Port=5432
-      - ASPNETCORE_URLS=http://+:80
+      - ASPNETCORE_URLS=https://+:443
+      - Https__CertificatePath=/app/certs/paypal-api.pfx
+      - Https__CertificatePassword=dev-cert-2024
       - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID}
       - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET}
       - PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com 
@@ -171,7 +185,9 @@ services:
       - Seq__ServerUrl=http://seq:80
       - Seq__ApiKey=${SEQ_API_KEY}
     ports:
-      - "5003:80"
+      - "5443:443"
+    volumes:
+      - ./certs:/app/certs:ro
     networks:
       - app-network
 
@@ -187,7 +203,7 @@ services:
       - ./frontend/webshop:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:5000/api
+      - VITE_API_URL=https://localhost:5440/api
     depends_on:
       - webshop-api
     command: npm run dev -- --host 0.0.0.0
@@ -206,7 +222,7 @@ services:
       - ./frontend/bank:/app
       - /app/node_modules
     environment:
-      - VITE_API_BASE_URL=http://localhost:5001 #sta se ovde desilo...
+      - VITE_API_BASE_URL=https://localhost:5441
     depends_on:
       - bank-api
     command: npm run dev -- --host 0.0.0.0
@@ -225,7 +241,7 @@ services:
       - ./frontend/psp:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:5002
+      - VITE_API_URL=https://localhost:5442
     depends_on:
       - psp-api
     command: npm run dev -- --host 0.0.0.0

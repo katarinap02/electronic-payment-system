@@ -18,7 +18,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://bank-api:80',  //bez dokera http://localhost:5001
+        target: 'https://bank-api:443',
         changeOrigin: true, 
         secure: false,
       }

@@ -94,7 +94,7 @@ const loadPaymentDetails = async () => {
       return
     }
 
-    const response = await axios.get(`http://localhost:5002/api/payments/${route.params.id}?token=${token}`)
+    const response = await axios.get(`/api/payments/${route.params.id}?token=${token}`)
     console.log('Payment details loaded:', response.data)
     payment.value = response.data
   } catch (err) {
@@ -115,7 +115,7 @@ const selectPaymentMethod = async (paymentMethodId) => {
   
   try {
     // Step 1: Select payment method on PSP
-    const pspResponse = await axios.post(`http://localhost:5002/api/payments/${route.params.id}/select-method`, {
+    const pspResponse = await axios.post(`/api/payments/${route.params.id}/select-method`, {
       paymentMethodId: paymentMethodId
     })
     
@@ -135,7 +135,7 @@ const selectPaymentMethod = async (paymentMethodId) => {
     
     // console.log('Bank Request:', bankRequest)
     
-    // const bankResponse = await axios.post('http://localhost:5001/api/payment/initiate', bankRequest)
+    // const bankResponse = await axios.post('/api/bank/payment/initiate', bankRequest)
     
     // console.log('Bank Response:', bankResponse.data)
     
@@ -169,7 +169,7 @@ onMounted(async () => {
   // 1. Bank callback (vratio se sa banke)
   if (status && bankPaymentId) {
     try {
-      const response = await axios.get(`http://localhost:5002/api/payments/${route.params.id}/bank-callback`, {
+      const response = await axios.get(`/api/payments/${route.params.id}/bank-callback`, {
         params: { status, paymentId: bankPaymentId }
       })
       
@@ -186,7 +186,7 @@ onMounted(async () => {
   // 2. PayPal Success (nije PSP token [PAYID-...] + ima PayerID)
   else if (!isPspToken && payPalPayerId) {
     try {
-      const response = await axios.get(`http://localhost:5002/api/payments/${route.params.id}/paypal-callback`, {
+      const response = await axios.get(`/api/payments/${route.params.id}/paypal-callback`, {
         params: { token: urlToken, payerId: payPalPayerId }
       })
       
@@ -206,7 +206,7 @@ onMounted(async () => {
     loading.value = false
     
     try {
-      await axios.post(`http://localhost:5002/api/payments/${route.params.id}/cancel`)
+      await axios.post(`/api/payments/${route.params.id}/cancel`)
     } catch (err) {
       console.error('Failed to cancel payment:', err)
     }
