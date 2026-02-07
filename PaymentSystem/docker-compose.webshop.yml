@@ -62,8 +62,7 @@ services:
       - VITE_PSP_API_URL=${PSP_EXTERNAL_URL:-https://psp-lb:443}/api
       - VITE_WEBSHOP_API_URL=https://webshop-api:443/api
     volumes:
-      - ./certs/localhost+2.pem:/app/certs/localhost+2.pem:ro
-      - ./certs/localhost+2-key.pem:/app/certs/localhost+2-key.pem:ro
+      - ./certs:/app/certs:ro
     networks:
       - webshop-network
     ports:
