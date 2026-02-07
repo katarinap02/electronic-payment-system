@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using PSP.Infrastructure.Extensions;
 using PSP.Infrastructure.Middleware;
+using PSP.Infrastructure.Services;
 using Serilog;
 using Serilog.Events;
 using System.Text;
@@ -78,6 +79,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"] ?? "fallback-secret-key-min-32-chars"))
         };
     });
+var logsPath = builder.Configuration["Serilog:FilePath"] ?? "/logs/psp";
+Directory.CreateDirectory(logsPath);
 
 //Serilog
 Log.Logger = new LoggerConfiguration()
@@ -92,6 +95,12 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
     .Enrich.WithProperty("TimeSyncStatus", timeSyncStatus)
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{ServiceName}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File(
+        path: Path.Combine(logsPath, "psp-.json"),
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 30,
+        restrictedToMinimumLevel: LogEventLevel.Information,
+        formatter: new Serilog.Formatting.Json.JsonFormatter())
     .WriteTo.Seq(
         serverUrl: builder.Configuration["Seq:ServerUrl"] ?? "http://seq:80",
         apiKey: builder.Configuration["Seq:ApiKey"],
@@ -108,6 +117,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddHostedService<FileIntegrityMonitorService>();
 
 builder.Services.AddAuthorization();
 

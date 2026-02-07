@@ -103,6 +103,8 @@ services:
       - "5440:443"
     volumes:
       - ./certs:/app/certs:ro
+      - ./logs/webshop:/logs/webshop
+      - ./fim:/app/fim
     networks:
       - app-network
 
@@ -129,6 +131,9 @@ services:
       - "5441:443"
     volumes:
       - ./certs:/app/certs:ro
+      - ./logs/bank:/logs/bank
+      - ./fim:/app/fim
+
     networks:
       - app-network
 
@@ -159,8 +164,11 @@ services:
       - RUN_MIGRATIONS=true
     volumes:
       - ./certs:/app/certs:ro
+      - ./logs/psp:/logs/psp
+      - ./fim:/app/fim
     networks:
       - app-network
+      
 
   # PSP API Instance 2
   psp-api-2:
@@ -271,8 +279,11 @@ services:
       - "5443:443"
     volumes:
       - ./certs:/app/certs:ro
+      - ./logs/paypal:/logs/paypal
+      - ./fim:/app/fim
     networks:
       - app-network
+
 
   # Vue Frontend za WebShop
   frontend-webshop:

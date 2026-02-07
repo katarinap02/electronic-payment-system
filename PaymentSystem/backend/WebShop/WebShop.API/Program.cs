@@ -27,7 +27,8 @@ catch
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Kestrel for HTTPS only
+var logsPath = builder.Configuration["Serilog:FilePath"] ?? "/logs/webshop";
+Directory.CreateDirectory(logsPath);
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
     serverOptions.ListenAnyIP(443, listenOptions =>
@@ -47,6 +48,7 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     });
 });
 
+
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
@@ -59,6 +61,12 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.WithProperty("TimeSyncStatus", timeSyncStatus)
     .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{ServiceName}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File(
+        path: Path.Combine(logsPath, "webshop-api-.json"),
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 30,
+        restrictedToMinimumLevel: LogEventLevel.Information,
+        formatter: new Serilog.Formatting.Json.JsonFormatter())
     .WriteTo.Seq(
         serverUrl: builder.Configuration["Seq:ServerUrl"] ?? "http://seq:80",
         apiKey: builder.Configuration["Seq:ApiKey"],
@@ -112,7 +120,7 @@ builder.Services.AddScoped<IInsurancePackageRepository, InsurancePackageReposito
 builder.Services.AddScoped<IInsurancePackageService, InsurancePackageService>();
 builder.Services.AddScoped<IAdditionalServiceRepository, AdditionalServiceRepository>();
 builder.Services.AddScoped<IAdditionalServiceService, AdditionalServiceService>();
-
+builder.Services.AddHostedService<FileIntegrityMonitorService>();
 // Rental services
 builder.Services.AddScoped<RentalRepository>();
 builder.Services.AddScoped<RentalService>();
