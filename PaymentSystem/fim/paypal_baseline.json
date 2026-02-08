@@ -1,16 +1,9 @@
 {
-  "/logs/paypal/paypal-api-20260207.json": {
-    "Path": "/logs/paypal/paypal-api-20260207.json",
-    "Size": 111937,
-    "LastModified": "2026-02-07T15:36:18.3670759Z",
-    "Hash": "C9D8EC0C4931822216927B520520C64B2D47819E2E163FAEECB352A1D7C0622F",
-    "CreatedAt": "2026-02-08T15:11:13.3995933Z"
-  },
   "/logs/paypal/paypal-api-20260208.json": {
     "Path": "/logs/paypal/paypal-api-20260208.json",
-    "Size": 50059,
-    "LastModified": "2026-02-08T15:11:13.4072954Z",
-    "Hash": "ACE00322B4ADD4EFA9D32BBDB3155514BB903264BE68B3A30042C2237A351E47",
-    "CreatedAt": "2026-02-08T15:11:13.537916Z"
+    "Size": 12314,
+    "LastModified": "2026-02-08T15:15:46.0033966Z",
+    "Hash": "B7BCC197A2DC96D73EED4BB901EE7400B4962E345BEEE606AD6E74805AC4B68C",
+    "CreatedAt": "2026-02-08T15:15:46.1311642Z"
   }
 }
