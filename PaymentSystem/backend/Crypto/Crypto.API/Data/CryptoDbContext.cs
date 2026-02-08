@@ -8,7 +8,6 @@ namespace Crypto.API.Data
         public CryptoDbContext(DbContextOptions<CryptoDbContext> options) : base(options) { }
 
         public DbSet<CryptoTransaction> CryptoTransactions { get; set; }
-        public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<MerchantWallet> MerchantWallets { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -60,32 +59,6 @@ namespace Crypto.API.Data
 
                 entity.Property(e => e.CryptoPaymentId).IsRequired();
                 entity.Property(e => e.PspTransactionId).IsRequired();
-            });
-
-            modelBuilder.Entity<AuditLog>(entity =>
-            {
-                entity.ToTable("audit_logs");
-                entity.HasKey(e => e.Id);
-
-                entity.HasIndex(e => e.Timestamp)
-                      .HasDatabaseName("ix_audit_timestamp");
-
-                entity.HasIndex(e => e.TransactionId)
-                      .HasDatabaseName("ix_audit_transaction");
-
-                entity.Property(e => e.Timestamp)
-                      .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                entity.Property(e => e.Action)
-                      .IsRequired()
-                      .HasMaxLength(50);
-
-                entity.Property(e => e.IpAddress)
-                      .IsRequired()
-                      .HasMaxLength(45);
-
-                entity.Property(e => e.Result)
-                      .HasMaxLength(100);
             });
 
             modelBuilder.Entity<MerchantWallet>(entity =>

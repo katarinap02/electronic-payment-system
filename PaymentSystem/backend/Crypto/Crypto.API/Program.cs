@@ -39,7 +39,6 @@ builder.Services.AddDbContext<CryptoDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<CryptoTransactionRepository>();
-builder.Services.AddScoped<AuditLogRepository>();
 
 builder.Services.AddScoped<EncryptionService>();
 builder.Services.AddScoped<Web3Service>();

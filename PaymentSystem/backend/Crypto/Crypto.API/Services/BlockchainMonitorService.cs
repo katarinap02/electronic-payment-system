@@ -32,7 +32,6 @@ namespace Crypto.API.Services
                         var paymentService = scope.ServiceProvider.GetRequiredService<CryptoPaymentService>();
                         var etherscanService = scope.ServiceProvider.GetRequiredService<EtherscanService>();
                         var encryption = scope.ServiceProvider.GetRequiredService<EncryptionService>();
-                        var auditRepo = scope.ServiceProvider.GetRequiredService<AuditLogRepository>();
 
                         // 1. Proveri expired transakcije
                         var expiredTxs = await transactionRepo.GetExpiredTransactionsAsync();
