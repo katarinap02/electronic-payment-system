@@ -232,6 +232,7 @@ services:
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
       - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
       - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}
+      - CryptoSettings__ApiUrl=http://crypto-api:80
       - Jwt__SecretKey=${JWT_SECRET_KEY}
       - Seq__ServerUrl=http://seq:80
       - Seq__ApiKey=${SEQ_API_KEY}
@@ -359,6 +360,59 @@ services:
     networks:
       - app-network
 
+  # PostgreSQL za Crypto
+  postgres-crypto:
+    image: postgres:15-alpine
+    container_name: crypto-db
+    environment:
+      POSTGRES_DB: crypto
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: crypto_password_123
+    ports:
+      - "5438:5432"
+    volumes:
+      - postgres-crypto-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # Crypto API Backend
+  crypto-api:
+    build:
+      context: ./backend
+      dockerfile: Crypto/Crypto.API/Dockerfile
+    container_name: crypto-api
+    depends_on:
+      postgres-crypto:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres-crypto;Database=crypto;Username=postgres;Password=crypto_password_123;Port=5432;SSL Mode=Disable
+      - ASPNETCORE_URLS=http://+:80
+      - CryptoSettings__Network=Sepolia
+      - CryptoSettings__InfuraApiUrl=https://sepolia.infura.io/v3/27eed759b9a9440cada9559ed678d951
+      - CryptoSettings__MerchantWalletAddress=0x02ee6C54748Ff5B968BeC71C2d1351C9dc5f8Aa0
+      - CryptoSettings__ExchangeRateApiUrl=https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=eur
+      - CryptoSettings__ConfirmationsRequired=1
+      - CryptoSettings__PaymentExpiryMinutes=15
+      - CryptoSettings__MonitoringIntervalSeconds=30
+      - CryptoSettings__AmountTolerancePercent=1.0
+      - CryptoSettings__FrontendUrl=http://localhost:5175
+      - CryptoSettings__EtherscanApiUrl=https://api.etherscan.io/v2/api
+      - CryptoSettings__EtherscanApiKey=EZII9UFDXZ9U29YAAVR4UC3D8C2HZN29Y4
+      - CryptoSettings__EtherscanChainId=11155111
+      - EncryptionSettings__Key=fRTEWkmsSahlURqImO7zDepw+ICVDwDUYrq7dO5LzSA=
+      - EncryptionSettings__IV=itbW3K9qWb5u3muUMmsj5g==
+      - PSPSettings__FrontendUrl=http://localhost:5174
+    ports:
+      - "5004:80"
+    networks:
+      - app-network
+
   #Seq za logove
   seq:
     image: datalust/seq:latest
@@ -385,7 +439,9 @@ volumes:
   postgres-bank-data:
   postgres-psp-data:
   postgres-paypal-data:
+  postgres-crypto-data:
 
 networks:
   app-network:
     driver: bridge
+

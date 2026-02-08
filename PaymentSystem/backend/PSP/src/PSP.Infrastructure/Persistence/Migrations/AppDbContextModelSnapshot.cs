@@ -57,6 +57,10 @@ namespace PSP.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("CustomerId")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<DateTime>("MerchantTimestamp")
                         .HasColumnType("timestamp with time zone");
 
