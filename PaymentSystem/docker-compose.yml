@@ -351,6 +351,7 @@ services:
       - psp-lb
     environment:
       - VITE_PSP_API_URL=https://psp-lb:443/api
+      - VITE_CRYPTO_API_URL=https://crypto-api:443/api
       - VITE_WEBSHOP_FRONTEND_URL=https://localhost:5173
     ports:
       - "5174:5174"

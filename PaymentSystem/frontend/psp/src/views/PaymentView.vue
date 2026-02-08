@@ -77,6 +77,7 @@ const route = useRoute()
 
 // Get WebShop frontend URL from environment variable
 const WEBSHOP_FRONTEND_URL = import.meta.env.VITE_WEBSHOP_FRONTEND_URL || 'https://localhost:5173'
+const CRYPTO_API_URL = import.meta.env.VITE_CRYPTO_API_URL || 'https://localhost:5444/api'
 
 const payment = ref(null)
 const loading = ref(false)
@@ -200,7 +201,7 @@ const handleCryptoPayment = async (pspData) => {
     // Notify backend about successful transaction
     if (cryptoPaymentId) {
       try {
-        await axios.post(`http://localhost:5004/api/crypto/confirm/${cryptoPaymentId}`, {
+        await axios.post(`${CRYPTO_API_URL}/crypto/confirm/${cryptoPaymentId}`, {
           txHash: txHash
         })
         console.log('✅ Backend notified of payment confirmation')
@@ -210,7 +211,7 @@ const handleCryptoPayment = async (pspData) => {
     }
     
     // Redirect to success page with all rental information
-    const successUrl = payment.value.successUrl || 'http://localhost:5173/payment-success'
+    const successUrl = payment.value.successUrl || `${WEBSHOP_FRONTEND_URL}/payment-success`
     const params = new URLSearchParams()
     params.append('pspTransactionId', route.params.id)
     params.append('orderId', payment.value.merchantOrderId)
@@ -232,15 +233,14 @@ const handleCryptoPayment = async (pspData) => {
       try {
         const cryptoPaymentId = pspData.cryptoPaymentUrl ? pspData.cryptoPaymentUrl.split('/').pop() : null
         if (cryptoPaymentId) {
-          await axios.post(`http://localhost:5004/api/crypto/cancel/${cryptoPaymentId}`)
+          await axios.post(`${CRYPTO_API_URL}/crypto/cancel/${cryptoPaymentId}`)
         }
       } catch (cancelError) {
         console.warn('Failed to cancel payment on backend:', cancelError)
       }
       
-      // Redirect to WebShop
-      const cancelUrl = payment.value.successUrl?.replace('/payment-success', '/vehicles') || 'http://localhost:5173/vehicles'
-      window.location.href = cancelUrl
+      // Redirect to WebShop vehicles page
+      window.location.href = `${WEBSHOP_FRONTEND_URL}/vehicles`
     } else {
       alert(`❌ Payment Failed\n\nError: ${error.message}`)
       selecting.value = false

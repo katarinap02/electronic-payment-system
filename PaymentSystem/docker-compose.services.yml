@@ -338,6 +338,7 @@ services:
       - psp-lb
     environment:
       - VITE_PSP_API_URL=https://psp-lb:443/api
+      - VITE_CRYPTO_API_URL=https://crypto-api:443/api
       - VITE_WEBSHOP_FRONTEND_URL=https://${WEBSHOP_HOST_IP}:5173
     volumes:
       - ./certs/localhost+2.pem:/app/certs/localhost+2.pem:ro
