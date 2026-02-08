@@ -221,11 +221,28 @@ const handleRentalConfirm = async (rentalData) => {
     console.log('Display amount:', rentalData.totals.total, currencyCode);
     console.log('Payment amount (EUR for bank):', paymentAmount, 'EUR');
     
+    // Proveri da li je korisnik ulogovan (kao u PaymentSuccess.vue)
+    if (!authStore.user || !authStore.user.id) {
+      console.error('User not logged in, cannot initialize payment');
+      alert('Please login to continue with payment');
+      router.push('/login');
+      return;
+    }
+    
+    // Debug: Log user info
+    console.log('✅ Auth Store User:', authStore.user);
+    console.log('✅ User ID:', authStore.user.id);
+    
+    // Dobij Customer ID (kao što se dobija userId u PaymentSuccess.vue)
+    const customerId = authStore.user.id.toString();
+    console.log('✅ Customer ID to send:', customerId);
+    
     // Initialize payment with PSP
     // For EUR: send 100 EUR
     // For USD: send 100 EUR for transaction, but PSP should display 115 USD to user
     const paymentResponse = await pspService.initializePayment({
       orderId: orderId,
+      customerId: customerId,  // Customer ID from auth store (same as userId in PaymentSuccess)
       amount: paymentAmount,            // EUR amount for bank transaction (100 EUR)
       currency: 0,                      // Always EUR (0) for bank - all accounts are in EUR
       displayAmount: rentalData.totals.total,  // Display amount (115 USD or 100 EUR)

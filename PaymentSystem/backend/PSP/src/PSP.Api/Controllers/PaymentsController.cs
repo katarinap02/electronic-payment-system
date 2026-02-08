@@ -20,6 +20,13 @@ public class PaymentsController : ControllerBase
     {
         try
         {
+            // Log incoming request
+            Console.WriteLine($"[PaymentsController] Received InitializePayment request:");
+            Console.WriteLine($"  - MerchantId: {request.MerchantId}");
+            Console.WriteLine($"  - MerchantOrderId: {request.MerchantOrderId}");
+            Console.WriteLine($"  - CustomerId: '{request.CustomerId}'");
+            Console.WriteLine($"  - Amount: {request.Amount}");
+            
             var response = await _paymentService.InitializePaymentAsync(request);
             return Ok(response);
         }
@@ -149,6 +156,20 @@ public class PaymentsController : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, new { message = "Error processing PayPal callback", error = ex.Message });
+        }
+    }
+
+    [HttpGet("{id}/crypto-callback")]
+    public async Task<ActionResult> HandleCryptoCallback(int id, [FromQuery] string status, [FromQuery] string? txHash)
+    {
+        try
+        {
+            var redirectUrl = await _paymentService.HandleCryptoCallbackAsync(id, status, txHash);
+            return Ok(new { redirectUrl });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Error processing Crypto callback", error = ex.Message });
         }
     }
 }

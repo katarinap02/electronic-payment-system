@@ -40,12 +40,13 @@
               v-for="method in payment.availablePaymentMethods"
               :key="method.id"
               class="payment-method-btn"
-              @click="selectPaymentMethod(method.id)"
+              @click="selectPaymentMethod(method.id, method.type)"
               :disabled="selecting"
             >
               <div class="method-info">
                 <h4>{{ method.name }}</h4>
                 <p>{{ method.type }} payment</p>
+                <p v-if="method.type === 'Crypto' || method.type === 'CRYPTO'" class="crypto-rate">1 ETH ≈ {{ exchangeRate }} EUR</p>
               </div>
               <div class="method-arrow">→</div>
             </button>
@@ -76,11 +77,13 @@ const route = useRoute()
 
 // Get WebShop frontend URL from environment variable
 const WEBSHOP_FRONTEND_URL = import.meta.env.VITE_WEBSHOP_FRONTEND_URL || 'https://localhost:5173'
+const CRYPTO_API_URL = import.meta.env.VITE_CRYPTO_API_URL || 'https://localhost:5444/api'
 
 const payment = ref(null)
 const loading = ref(false)
 const error = ref(null)
 const selecting = ref(false)
+const exchangeRate = ref(1680) // 1 ETH ≈ 1680 EUR (can be fetched from API)
 
 const loadPaymentDetails = async () => {
   loading.value = true
@@ -113,7 +116,7 @@ const loadPaymentDetails = async () => {
   }
 }
 
-const selectPaymentMethod = async (paymentMethodId) => {
+const selectPaymentMethod = async (paymentMethodId, paymentType) => {
   selecting.value = true
   
   try {
@@ -124,26 +127,14 @@ const selectPaymentMethod = async (paymentMethodId) => {
     
     console.log('PSP Response:', pspResponse.data)
     
-    // // Step 2: Call Bank API directly to get payment form URL
-    // const bankRequest = {
-    //   merchantId: pspResponse.data.merchantId,
-    //   amount: pspResponse.data.amount,
-    //   currency: pspResponse.data.currency,
-    //   stan: pspResponse.data.stan,
-    //   pspTimestamp: pspResponse.data.pspTimestamp,
-    //   successUrl: pspResponse.data.successUrl,
-    //   failedUrl: pspResponse.data.failedUrl,
-    //   errorUrl: pspResponse.data.errorUrl
-    // }
+    // Step 2: If CRYPTO payment, open MetaMask directly
+    if (paymentType === 'Crypto' || paymentType === 'CRYPTO') {
+      await handleCryptoPayment(pspResponse.data)
+      return
+    }
     
-    // console.log('Bank Request:', bankRequest)
-    
-    // const bankResponse = await axios.post('/api/bank/payment/initiate', bankRequest)
-    
-    // console.log('Bank Response:', bankResponse.data)
-    
-    // Step 3: Redirect to bank payment form
-    const redirectUrl = pspResponse.data.bankPaymentUrl || pspResponse.data.approvalUrl || pspResponse.data.redirectUrl
+    // Step 3: Redirect to payment provider (Bank or PayPal)
+    const redirectUrl = pspResponse.data.bankPaymentUrl || pspResponse.data.approvalUrl || pspResponse.data.cryptoPaymentUrl || pspResponse.data.redirectUrl
     if (redirectUrl) {
       window.location.href = redirectUrl
     } else {
@@ -155,6 +146,105 @@ const selectPaymentMethod = async (paymentMethodId) => {
     console.error('Error details:', err.response?.data)
     alert(err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to select payment method')
     selecting.value = false
+  }
+}
+
+const handleCryptoPayment = async (pspData) => {
+  // Check if MetaMask is installed
+  if (typeof window.ethereum === 'undefined') {
+    alert('⚠️ MetaMask is not installed!\n\nPlease install MetaMask extension to pay with cryptocurrency.')
+    selecting.value = false
+    return
+  }
+  
+  try {
+    console.log('PSP Crypto Data:', pspData)
+    
+    // Validate required data
+    if (!pspData.walletAddress || !pspData.amountInCrypto) {
+      throw new Error('Missing crypto payment data from PSP')
+    }
+    
+    // Request account access
+    await window.ethereum.request({ method: 'eth_requestAccounts' })
+    
+    // Convert ETH amount to Wei (directly from PSP data)
+    const amountInWei = Math.floor(pspData.amountInCrypto * 1e18)
+    const amountHex = '0x' + amountInWei.toString(16)
+    
+    console.log('Amount in ETH:', pspData.amountInCrypto)
+    console.log('Amount in Wei:', amountInWei)
+    console.log('Amount in Hex:', amountHex)
+    console.log('Wallet Address:', pspData.walletAddress)
+    
+    // Send transaction request to MetaMask
+    const transactionParameters = {
+      to: pspData.walletAddress,
+      from: window.ethereum.selectedAddress,
+      value: amountHex,
+      chainId: '0xaa36a7' // Sepolia testnet (11155111 in hex)
+    }
+    
+    console.log('Opening MetaMask with params:', transactionParameters)
+    
+    // Wait for user to confirm transaction in MetaMask
+    const txHash = await window.ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [transactionParameters],
+    })
+    
+    console.log('✅ Transaction confirmed! Hash:', txHash)
+    
+    // Extract crypto payment ID from cryptoPaymentUrl
+    const cryptoPaymentId = pspData.cryptoPaymentUrl ? pspData.cryptoPaymentUrl.split('/').pop() : null
+    
+    // Notify backend about successful transaction
+    if (cryptoPaymentId) {
+      try {
+        await axios.post(`${CRYPTO_API_URL}/crypto/confirm/${cryptoPaymentId}`, {
+          txHash: txHash
+        })
+        console.log('✅ Backend notified of payment confirmation')
+      } catch (err) {
+        console.warn('⚠️ Failed to notify backend, but transaction was sent:', err)
+      }
+    }
+    
+    // Redirect to success page with all rental information
+    const successUrl = payment.value.successUrl || `${WEBSHOP_FRONTEND_URL}/payment-success`
+    const params = new URLSearchParams()
+    params.append('pspTransactionId', route.params.id)
+    params.append('orderId', payment.value.merchantOrderId)
+    params.append('amount', payment.value.amount)
+    params.append('currency', payment.value.currency)
+    params.append('paymentMethod', 'CRYPTO')
+    params.append('txHash', txHash)
+    
+    window.location.href = `${successUrl}?${params.toString()}`
+    
+  } catch (error) {
+    console.error('❌ Crypto payment failed:', error)
+    
+    // Check if user rejected the transaction
+    if (error.code === 4001) {
+      console.log('User cancelled the transaction')
+      
+      // Cancel the payment on backend
+      try {
+        const cryptoPaymentId = pspData.cryptoPaymentUrl ? pspData.cryptoPaymentUrl.split('/').pop() : null
+        if (cryptoPaymentId) {
+          await axios.post(`${CRYPTO_API_URL}/crypto/cancel/${cryptoPaymentId}`)
+        }
+      } catch (cancelError) {
+        console.warn('Failed to cancel payment on backend:', cancelError)
+      }
+      
+      // Redirect to WebShop vehicles page
+      window.location.href = `${WEBSHOP_FRONTEND_URL}/vehicles`
+    } else {
+      alert(`❌ Payment Failed\n\nError: ${error.message}`)
+      selecting.value = false
+    }
   }
 }
 
@@ -215,12 +305,32 @@ onMounted(async () => {
     }
   }
   
-  // 4. Normalno učitavanje (ima validan PSP token - 32 hex)
+  // 4. Crypto Callback (ima status i txHash parametar)
+  else if (route.query.status && route.query.txHash) {
+    try {
+      const cryptoStatus = route.query.status
+      const txHash = route.query.txHash
+      
+      const response = await axios.get(`http://localhost:5002/api/payments/${route.params.id}/crypto-callback`, {
+        params: { status: cryptoStatus, txHash: txHash }
+      })
+      
+      if (response.data && response.data.redirectUrl) {
+        window.location.href = response.data.redirectUrl
+        return
+      }
+    } catch (err) {
+      console.error('Failed to process Crypto callback:', err)
+      error.value = 'Failed to process Crypto payment'
+    }
+  }
+  
+  // 5. Normalno učitavanje (ima validan PSP token - 32 hex)
   else if (isPspToken) {
     await loadPaymentDetails()
   }
   
-  // 5. Nema tokena ili nešto ne valja
+  // 6. Nema tokena ili nešto ne valja
   else {
     error.value = 'Invalid or missing payment link'
     loading.value = false
@@ -414,6 +524,7 @@ const goBackToShop = () => {
 .payment-method-btn:hover .method-icon,
 .payment-method-btn:hover .method-info h4,
 .payment-method-btn:hover .method-info p,
+.payment-method-btn:hover .method-info p.crypto-rate,
 .payment-method-btn:hover .method-arrow {
   color: white;
 }
@@ -452,6 +563,13 @@ const goBackToShop = () => {
   color: #6b7280;
   margin: 0;
   font-size: 14px;
+}
+
+.method-info p.crypto-rate {
+  color: #3b82f6;
+  font-weight: 600;
+  margin-top: 5px;
+  font-size: 13px;
 }
 
 .method-arrow {
