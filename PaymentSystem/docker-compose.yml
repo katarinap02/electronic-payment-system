@@ -163,6 +163,7 @@ services:
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
       - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
       - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}
+      - CryptoSettings__ApiUrl=https://crypto-api:443
       - Jwt__SecretKey=${JWT_SECRET_KEY}
       - Seq__ServerUrl=http://seq:80
       - Seq__ApiKey=${SEQ_API_KEY}
@@ -198,6 +199,7 @@ services:
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
       - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
       - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}
+      - CryptoSettings__ApiUrl=https://crypto-api:443
       - Jwt__SecretKey=${JWT_SECRET_KEY}
       - Seq__ServerUrl=http://seq:80
       - Seq__ApiKey=${SEQ_API_KEY}
@@ -232,7 +234,7 @@ services:
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
       - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
       - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}
-      - CryptoSettings__ApiUrl=http://crypto-api:80
+      - CryptoSettings__ApiUrl=https://crypto-api:443
       - Jwt__SecretKey=${JWT_SECRET_KEY}
       - Seq__ServerUrl=http://seq:80
       - Seq__ApiKey=${SEQ_API_KEY}
@@ -367,7 +369,7 @@ services:
     environment:
       POSTGRES_DB: crypto
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: crypto_password_123
+      POSTGRES_PASSWORD: ${POSTGRES_CRYPTO_PASSWORD}
     ports:
       - "5438:5432"
     volumes:
@@ -391,8 +393,10 @@ services:
         condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=postgres-crypto;Database=crypto;Username=postgres;Password=crypto_password_123;Port=5432;SSL Mode=Disable
-      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__DefaultConnection=Host=postgres-crypto;Database=crypto;Username=postgres;Password=${POSTGRES_CRYPTO_PASSWORD};Port=5432
+      - ASPNETCORE_URLS=https://+:443
+      - Https__CertificatePath=/app/certs/crypto-api.pfx
+      - Https__CertificatePassword=dev-cert-2024
       - CryptoSettings__Network=Sepolia
       - CryptoSettings__InfuraApiUrl=https://sepolia.infura.io/v3/27eed759b9a9440cada9559ed678d951
       - CryptoSettings__MerchantWalletAddress=0x02ee6C54748Ff5B968BeC71C2d1351C9dc5f8Aa0
@@ -401,15 +405,24 @@ services:
       - CryptoSettings__PaymentExpiryMinutes=15
       - CryptoSettings__MonitoringIntervalSeconds=30
       - CryptoSettings__AmountTolerancePercent=1.0
-      - CryptoSettings__FrontendUrl=http://localhost:5175
+      - CryptoSettings__FrontendUrl=https://localhost:5175
       - CryptoSettings__EtherscanApiUrl=https://api.etherscan.io/v2/api
       - CryptoSettings__EtherscanApiKey=EZII9UFDXZ9U29YAAVR4UC3D8C2HZN29Y4
       - CryptoSettings__EtherscanChainId=11155111
       - EncryptionSettings__Key=fRTEWkmsSahlURqImO7zDepw+ICVDwDUYrq7dO5LzSA=
       - EncryptionSettings__IV=itbW3K9qWb5u3muUMmsj5g==
-      - PSPSettings__FrontendUrl=http://localhost:5174
+      - PSPSettings__ApiUrl=https://psp-lb:443/api
+      - PSPSettings__FrontendUrl=https://localhost:5174
+      - Jwt__SecretKey=${JWT_SECRET_KEY}
+      - Serilog__FilePath=/logs/crypto
+      - Seq__ServerUrl=http://seq:80
+      - Seq__ApiKey=${SEQ_API_KEY}
     ports:
-      - "5004:80"
+      - "5444:443"
+    volumes:
+      - ./certs:/app/certs:ro
+      - ./logs/crypto:/logs/crypto
+      - ./fim:/app/fim
     networks:
       - app-network
 

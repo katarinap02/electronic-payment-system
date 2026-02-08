@@ -59,6 +59,26 @@ services:
       timeout: 5s
       retries: 5
 
+  # PostgreSQL baza za Crypto
+  postgres-crypto:
+    image: postgres:15-alpine
+    container_name: crypto-db
+    environment:
+      - POSTGRES_DB=crypto
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_CRYPTO_PASSWORD}
+    volumes:
+      - postgres-crypto-data:/var/lib/postgresql/data
+    networks:
+      - services-network
+    ports:
+      - "5437:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d crypto"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Seq centralizovani logging
   seq:
     image: datalust/seq:latest
@@ -97,6 +117,7 @@ services:
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
       - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
       - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}
+      - CryptoSettings__ApiUrl=https://crypto-api:443
       - Jwt__SecretKey=${JWT_SECRET_KEY}
       - Seq__ServerUrl=http://seq:80
       - Seq__ApiKey=${SEQ_API_KEY}
@@ -131,6 +152,7 @@ services:
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
       - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
       - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}
+      - CryptoSettings__ApiUrl=https://crypto-api:443
       - Jwt__SecretKey=${JWT_SECRET_KEY}
       - Seq__ServerUrl=http://seq:80
       - Seq__ApiKey=${SEQ_API_KEY}
@@ -165,6 +187,7 @@ services:
       - BANK_HMAC_SECRET=${BANK_HMAC_SECRET}
       - BankSettings__TestBank__MerchantId=${BANK_MERCHANT_ID}
       - BankSettings__TestBank__SecretKey=${BANK_HMAC_SECRET}
+      - CryptoSettings__ApiUrl=https://crypto-api:443
       - Jwt__SecretKey=${JWT_SECRET_KEY}
       - Seq__ServerUrl=http://seq:80
       - Seq__ApiKey=${SEQ_API_KEY}
@@ -261,6 +284,50 @@ services:
     ports:
       - "5443:443"  # HTTPS
 
+  # Crypto API
+  crypto-api:
+    build:
+      context: ./backend
+      dockerfile: Crypto/Crypto.API/Dockerfile
+    container_name: crypto-api
+    depends_on:
+      postgres-crypto:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres-crypto;Database=crypto;Username=postgres;Password=${POSTGRES_CRYPTO_PASSWORD};Port=5432
+      - ASPNETCORE_URLS=https://+:443
+      - Https__CertificatePath=/app/certs/crypto-api.pfx
+      - Https__CertificatePassword=dev-cert-2024
+      - CryptoSettings__Network=Sepolia
+      - CryptoSettings__InfuraApiUrl=https://sepolia.infura.io/v3/27eed759b9a9440cada9559ed678d951
+      - CryptoSettings__MerchantWalletAddress=0x02ee6C54748Ff5B968BeC71C2d1351C9dc5f8Aa0
+      - CryptoSettings__ExchangeRateApiUrl=https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=eur
+      - CryptoSettings__ConfirmationsRequired=1
+      - CryptoSettings__PaymentExpiryMinutes=15
+      - CryptoSettings__MonitoringIntervalSeconds=30
+      - CryptoSettings__AmountTolerancePercent=1.0
+      - CryptoSettings__FrontendUrl=https://${SERVICES_HOST_IP}:5175
+      - CryptoSettings__EtherscanApiUrl=https://api.etherscan.io/v2/api
+      - CryptoSettings__EtherscanApiKey=EZII9UFDXZ9U29YAAVR4UC3D8C2HZN29Y4
+      - CryptoSettings__EtherscanChainId=11155111
+      - EncryptionSettings__Key=fRTEWkmsSahlURqImO7zDepw+ICVDwDUYrq7dO5LzSA=
+      - EncryptionSettings__IV=itbW3K9qWb5u3muUMmsj5g==
+      - PSPSettings__ApiUrl=https://psp-lb:443/api
+      - PSPSettings__FrontendUrl=https://${SERVICES_HOST_IP}:5174
+      - Jwt__SecretKey=${JWT_SECRET_KEY}
+      - Serilog__FilePath=/logs/crypto
+      - Seq__ServerUrl=http://seq:80
+      - Seq__ApiKey=${SEQ_API_KEY}
+    volumes:
+      - ./certs:/app/certs:ro
+      - ./logs/crypto:/logs/crypto
+      - ./fim:/app/fim
+    networks:
+      - services-network
+    ports:
+      - "5444:443"  # HTTPS
+
   # PSP Frontend
   frontend-psp:
     build:
@@ -306,4 +373,5 @@ volumes:
   postgres-psp-data:
   postgres-bank-data:
   postgres-paypal-data:
+  postgres-crypto-data:
   seq-data:

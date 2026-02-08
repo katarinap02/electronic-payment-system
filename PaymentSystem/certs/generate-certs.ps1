@@ -49,6 +49,7 @@ New-ServiceCertificate -ServiceName "PSP API" -DnsName "psp-api"
 New-ServiceCertificate -ServiceName "WebShop API" -DnsName "webshop-api"
 New-ServiceCertificate -ServiceName "Bank API" -DnsName "bank-api"
 New-ServiceCertificate -ServiceName "PayPal API" -DnsName "paypal-api"
+New-ServiceCertificate -ServiceName "Crypto API" -DnsName "crypto-api"
 
 Write-Host "`n===== Frontend Sertifikati =====" -ForegroundColor Magenta
 New-ServiceCertificate -ServiceName "WebShop Frontend" -DnsName "frontend-webshop"
@@ -63,6 +64,7 @@ Write-Host "  - psp-api.pfx / psp-api.cer" -ForegroundColor White
 Write-Host "  - webshop-api.pfx / webshop-api.cer" -ForegroundColor White
 Write-Host "  - bank-api.pfx / bank-api.cer" -ForegroundColor White
 Write-Host "  - paypal-api.pfx / paypal-api.cer" -ForegroundColor White
+Write-Host "  - crypto-api.pfx / crypto-api.cer" -ForegroundColor White
 Write-Host "Frontend:" -ForegroundColor Yellow
 Write-Host "  - frontend-webshop.pfx / frontend-webshop.cer" -ForegroundColor White
 Write-Host "  - frontend-psp.pfx / frontend-psp.cer" -ForegroundColor White

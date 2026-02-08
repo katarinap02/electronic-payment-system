@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -13,8 +13,7 @@ namespace PSP.Infrastructure.Persistence.Migrations
             migrationBuilder.AddColumn<string>(
                 name: "CustomerId",
                 table: "Payments",
-                type: "character varying(50)",
-                maxLength: 50,
+                type: "text",
                 nullable: true);
         }
 

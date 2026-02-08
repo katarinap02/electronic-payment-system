@@ -6,6 +6,29 @@ using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var logsPath = builder.Configuration["Serilog:FilePath"] ?? "/logs/crypto";
+Directory.CreateDirectory(logsPath);
+
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.ListenAnyIP(443, listenOptions =>
+    {
+        var certPath = builder.Configuration["Https:CertificatePath"] ?? "/app/certs/crypto-api.pfx";
+        var certPassword = builder.Configuration["Https:CertificatePassword"] ?? "dev-cert-2024";
+        
+        if (File.Exists(certPath))
+        {
+            listenOptions.UseHttps(certPath, certPassword);
+            Console.WriteLine($"HTTPS configured with certificate: {certPath}");
+        }
+        else
+        {
+            Console.WriteLine($"Certificate not found at {certPath}, using default HTTPS configuration");
+            listenOptions.UseHttps();
+        }
+    });
+});
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -36,9 +59,10 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowPSP",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5174", "http://localhost:5002", "http://localhost:5175", "http://psp-api:80")
+            policy.SetIsOriginAllowed(origin => true)
                   .AllowAnyHeader()
-                  .AllowAnyMethod();
+                  .AllowAnyMethod()
+                  .AllowCredentials();
         });
 });
 

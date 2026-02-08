@@ -27,3 +27,12 @@
 [2026-02-07T15:30:16.4891432Z] MISSING: /logs/psp/psp-20260207.json
 [2026-02-07T15:56:00.3392379Z] TAMPERED: /logs/psp/psp-20260207.json (hash changed, size 282088)
 [2026-02-07T15:57:30.4535473Z] TAMPERED: /logs/psp/psp-20260207.json (hash changed, size 358680)
+[2026-02-08T18:39:46.5049572Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 83247)
+[2026-02-08T18:40:42.9020821Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 84025)
+[2026-02-08T18:40:42.9391161Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 84025)
+[2026-02-08T18:40:46.5464908Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 84025)
+[2026-02-08T18:47:40.7140726Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 164190)
+[2026-02-08T18:47:40.7626358Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 164190)
+[2026-02-08T18:47:44.4316477Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 164190)
+[2026-02-08T19:12:51.5333333Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 439573)
+[2026-02-08T19:28:07.2965277Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 527392)
