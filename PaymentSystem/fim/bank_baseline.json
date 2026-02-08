@@ -1,9 +1,16 @@
 {
+  "/logs/bank/bank-api-20260207.json": {
+    "Path": "/logs/bank/bank-api-20260207.json",
+    "Size": 683690,
+    "LastModified": "2026-02-07T16:10:26.6368638Z",
+    "Hash": "FF0FEE3CA0C5545BE497D046ACCB69EAF115F73074F6DA8445A4B0BAF5D21C21",
+    "CreatedAt": "2026-02-08T20:17:50.9333349Z"
+  },
   "/logs/bank/bank-api-20260208.json": {
     "Path": "/logs/bank/bank-api-20260208.json",
-    "Size": 120940,
-    "LastModified": "2026-02-08T15:19:20.5453757Z",
-    "Hash": "C2F781A33E7FCE98ECB1418A2C651BC885D6EA1E84A1996F0B0243B0E2CD7687",
-    "CreatedAt": "2026-02-08T15:19:20.6852916Z"
+    "Size": 758622,
+    "LastModified": "2026-02-08T20:19:52.0112762Z",
+    "Hash": "5757C3618F60A4A7537C1C816BCDB7E51B69010582E1F82AA339610642EB49DF",
+    "CreatedAt": "2026-02-08T20:19:52.1711969Z"
   }
 }

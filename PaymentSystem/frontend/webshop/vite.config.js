@@ -50,6 +50,7 @@ export default defineConfig({
         target: getWebshopTarget(),
         changeOrigin: true, 
         secure: false,
+        rewrite: (path) => path,
       }
     }
   }

@@ -1,9 +1,16 @@
 {
+  "/logs/webshop/webshop-api-20260207.json": {
+    "Path": "/logs/webshop/webshop-api-20260207.json",
+    "Size": 633804,
+    "LastModified": "2026-02-07T15:57:45.1504435Z",
+    "Hash": "F7750D4F8AF36F56A82434662E5F5D1A2EB2CFC318BBE2E78C6B47B47F026E78",
+    "CreatedAt": "2026-02-08T20:17:46.8279026Z"
+  },
   "/logs/webshop/webshop-api-20260208.json": {
     "Path": "/logs/webshop/webshop-api-20260208.json",
-    "Size": 181871,
-    "LastModified": "2026-02-08T15:18:20.5157337Z",
-    "Hash": "059B30DC30A8286974B37FE370727322F08B29FF674C2E897B504BBBE68A3C98",
-    "CreatedAt": "2026-02-08T15:18:20.7656551Z"
+    "Size": 1292424,
+    "LastModified": "2026-02-08T20:19:48.6576772Z",
+    "Hash": "66E2B64C0C83BA57B8F20D28710A2B1E6CC64539C034AB654F4C7AD0E33C1DCC",
+    "CreatedAt": "2026-02-08T20:19:48.8592877Z"
   }
 }

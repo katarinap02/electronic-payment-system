@@ -8,6 +8,7 @@ public class Payment
     public int WebShopId { get; set; }
     public int? PaymentMethodId { get; set; }
     public required string MerchantOrderId { get; set; }
+    public string? CustomerId { get; set; }
     public decimal Amount { get; set; }
     public Currency Currency { get; set; }
     public PaymentStatus Status { get; set; } = PaymentStatus.Pending;

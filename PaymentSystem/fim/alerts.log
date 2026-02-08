@@ -1,3 +1,51 @@
-[2026-02-08T15:17:42.7606468Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 77051)
-[2026-02-08T15:17:42.7613860Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 77051)
-[2026-02-08T15:17:51.5845245Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 77051)
+[2026-02-07T12:33:17.7863240Z] TRUNCATED: /logs/bank/bank-api-20260207.json (89381 -> 88937)
+[2026-02-07T13:53:20.5073672Z] TRUNCATED: /logs/paypal/paypal-api-20260207.json (17218 -> 16766)
+[2026-02-07T13:54:50.7941205Z] TRUNCATED: /logs/paypal/paypal-api-20260207.json (18437 -> 18266)
+[2026-02-07T13:54:51.9050991Z] TRUNCATED: /logs/webshop/webshop-api-20260207.json (119522 -> 119064)
+[2026-02-07T13:55:24.0388465Z] TRUNCATED: /logs/psp/psp-20260207.json (121226 -> 120781)
+[2026-02-07T14:01:57.8184899Z] TRUNCATED: /logs/bank/bank-api-20260207.json (421485 -> 421477)
+[2026-02-07T14:03:58.5820194Z] TRUNCATED: /logs/bank/bank-api-20260207.json (425638 -> 423941)
+[2026-02-07T15:28:43.4800613Z] MISSING: /logs/psp/psp-20260207.json
+[2026-02-07T15:28:43.8691751Z] MISSING: /logs/psp/psp-20260207.json
+[2026-02-07T15:28:44.0513089Z] MISSING: /logs/paypal/paypal-api-20260207.json
+[2026-02-07T15:28:45.9769251Z] MISSING: /logs/bank/bank-api-20260207.json
+[2026-02-07T15:28:46.4463658Z] MISSING: /logs/psp/psp-20260207.json
+[2026-02-07T15:29:13.4888985Z] MISSING: /logs/psp/psp-20260207.json
+[2026-02-07T15:29:13.8746087Z] MISSING: /logs/psp/psp-20260207.json
+[2026-02-07T15:29:14.0553914Z] MISSING: /logs/paypal/paypal-api-20260207.json
+[2026-02-07T15:29:15.9835121Z] MISSING: /logs/bank/bank-api-20260207.json
+[2026-02-07T15:29:16.4583377Z] MISSING: /logs/psp/psp-20260207.json
+[2026-02-07T15:29:43.4979035Z] MISSING: /logs/psp/psp-20260207.json
+[2026-02-07T15:29:43.8877662Z] MISSING: /logs/psp/psp-20260207.json
+[2026-02-07T15:29:44.0683280Z] MISSING: /logs/paypal/paypal-api-20260207.json
+[2026-02-07T15:29:45.9929901Z] MISSING: /logs/bank/bank-api-20260207.json
+[2026-02-07T15:29:46.4658228Z] MISSING: /logs/psp/psp-20260207.json
+[2026-02-07T15:30:13.5062162Z] MISSING: /logs/psp/psp-20260207.json
+[2026-02-07T15:30:13.8929705Z] MISSING: /logs/psp/psp-20260207.json
+[2026-02-07T15:30:14.0741839Z] MISSING: /logs/paypal/paypal-api-20260207.json
+[2026-02-07T15:30:16.0102023Z] MISSING: /logs/bank/bank-api-20260207.json
+[2026-02-07T15:30:16.4891432Z] MISSING: /logs/psp/psp-20260207.json
+[2026-02-07T15:56:00.3392379Z] TAMPERED: /logs/psp/psp-20260207.json (hash changed, size 282088)
+[2026-02-07T15:57:30.4535473Z] TAMPERED: /logs/psp/psp-20260207.json (hash changed, size 358680)
+[2026-02-08T18:39:46.5049572Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 83247)
+[2026-02-08T18:40:42.9020821Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 84025)
+[2026-02-08T18:40:42.9391161Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 84025)
+[2026-02-08T18:40:46.5464908Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 84025)
+[2026-02-08T18:47:40.7140726Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 164190)
+[2026-02-08T18:47:40.7626358Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 164190)
+[2026-02-08T18:47:44.4316477Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 164190)
+[2026-02-08T19:12:51.5333333Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 439573)
+[2026-02-08T19:28:07.2965277Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 527392)
+[2026-02-08T19:46:05.0214188Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 677464)
+[2026-02-08T19:46:05.0261915Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 677464)
+[2026-02-08T19:46:11.1271909Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 677464)
+[2026-02-08T19:47:41.2232381Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 699587)
+[2026-02-08T19:55:11.6748291Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 764398)
+[2026-02-08T19:56:37.1903805Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 765177)
+[2026-02-08T19:56:37.1957652Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 765177)
+[2026-02-08T19:56:41.7873142Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 765177)
+[2026-02-08T20:10:09.2761698Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 939004)
+[2026-02-08T20:10:09.7672326Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 939004)
+[2026-02-08T20:10:13.0114661Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 939004)
+[2026-02-08T20:11:43.1061868Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 1023904)
+[2026-02-08T20:18:22.1943239Z] TAMPERED: /logs/psp/psp-20260208.json (hash changed, size 1158004)
