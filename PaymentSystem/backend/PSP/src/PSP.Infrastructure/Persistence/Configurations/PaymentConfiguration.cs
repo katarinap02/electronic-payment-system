@@ -14,6 +14,10 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
             .IsRequired()
             .HasMaxLength(100);
 
+        builder.Property(p => p.CustomerId)
+            .IsRequired(false)
+            .HasMaxLength(50);
+
         builder.Property(p => p.Amount)
             .IsRequired()
             .HasPrecision(18, 2);

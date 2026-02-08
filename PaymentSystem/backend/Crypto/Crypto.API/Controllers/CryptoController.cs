@@ -201,8 +201,31 @@ namespace Crypto.API.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+
+        [HttpPost("confirm/{cryptoPaymentId}")]
+        public async Task<ActionResult> ConfirmPayment(string cryptoPaymentId, [FromBody] ConfirmPaymentRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Confirming payment: {CryptoPaymentId}, TxHash: {TxHash}", 
+                    cryptoPaymentId, request.TxHash);
+
+                await _paymentService.ConfirmTransactionAsync(cryptoPaymentId, request.TxHash);
+                
+                return Ok(new { 
+                    message = "Payment confirmed successfully",
+                    status = "COMPLETED"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error confirming payment");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
     }
 
     public record SimulatePaymentRequest(string CustomerWallet, decimal AmountInEur);
     public record ValidateTransactionRequest(string TxHash, decimal ExpectedAmountInEur);
+    public record ConfirmPaymentRequest(string TxHash);
 }

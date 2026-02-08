@@ -35,9 +35,8 @@ namespace Crypto.API.Repositories
         public async Task<List<CryptoTransaction>> GetPendingTransactionsAsync()
         {
             return await _context.CryptoTransactions
-                .Where(t => (t.Status == CryptoTransaction.CryptoStatus.PENDING ||
-                             t.Status == CryptoTransaction.CryptoStatus.CANCELLED) &&
-                            t.ExpiresAt > DateTime.UtcNow)
+                .Where(t => t.Status == CryptoTransaction.CryptoStatus.PENDING ||
+                            t.Status == CryptoTransaction.CryptoStatus.CANCELLED)
                 .ToListAsync();
         }
         public async Task<List<CryptoTransaction>> GetConfirmingTransactionsAsync()
@@ -55,9 +54,10 @@ namespace Crypto.API.Repositories
 
         public async Task<List<CryptoTransaction>> GetExpiredTransactionsAsync()
         {
+            // ExpiresAt removed - instant confirmation via MetaMask
             return await _context.CryptoTransactions
-                .Where(t => t.Status == CryptoTransaction.CryptoStatus.PENDING && 
-                           t.ExpiresAt <= DateTime.UtcNow)
+                .Where(t => t.Status == CryptoTransaction.CryptoStatus.PENDING)
+                .Take(0) // Return empty list as we no longer track expiration
                 .ToListAsync();
         }
     }

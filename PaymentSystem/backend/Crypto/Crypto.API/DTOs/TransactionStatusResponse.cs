@@ -7,9 +7,7 @@
         string Currency,
         decimal AmountInEth,
         string TransactionHash,
-        int Confirmations,
         DateTime? CompletedAt,
-        DateTime ExpiresAt,
         string WalletAddress,
         string MerchantName
     );

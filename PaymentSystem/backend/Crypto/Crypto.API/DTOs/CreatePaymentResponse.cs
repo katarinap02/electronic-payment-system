@@ -3,10 +3,9 @@ namespace Crypto.API.DTOs
     public record CreatePaymentResponse(
         string CryptoPaymentId,
         string PaymentUrl,
-        string WalletAddress,
+        string WalletAddress, // Decrypted wallet address
         decimal AmountInEth,
         decimal ExchangeRate,
-        DateTime ExpiresAt,
         string Status
     );
 }

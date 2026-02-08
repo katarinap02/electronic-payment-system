@@ -278,26 +278,6 @@ services:
     networks:
       - app-network
 
-  # Vue Frontend za Crypto
-  frontend-crypto:
-    build:
-      context: ./frontend/crypto
-      dockerfile: Dockerfile
-    container_name: frontend-crypto
-    ports:
-      - "5175:5175"
-    volumes:
-      - ./frontend/crypto:/app
-      - /app/node_modules
-    environment:
-      - VITE_CRYPTO_API_URL=http://localhost:5004
-      - VITE_PSP_FRONTEND_URL=http://localhost:5174
-    depends_on:
-      - crypto-api
-    command: npm run dev -- --host 0.0.0.0
-    networks:
-      - app-network
-
 volumes:
   postgres-webshop-data:
   postgres-bank-data:

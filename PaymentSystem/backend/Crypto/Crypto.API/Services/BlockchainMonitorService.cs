@@ -45,7 +45,7 @@ namespace Crypto.API.Services
                         var pendingTxs = await transactionRepo.GetPendingTransactionsAsync();
                         foreach (var tx in pendingTxs)
                         {
-                            var walletAddress = tx.WalletAddress;
+                            var walletAddress = encryption.Decrypt(tx.EncryptedWalletAddress);
 
                             var result = await etherscanService.FindIncomingTransactionAsync(
                                 walletAddress,
@@ -61,25 +61,22 @@ namespace Crypto.API.Services
                             }
                         }
 
-                        // 3. Monitor CONFIRMING transakcije
+                        // 3. Monitor CONFIRMING transakcije - no longer needed with instant confirmation
                         var confirmingTxs = await transactionRepo.GetConfirmingTransactionsAsync();
                         foreach (var tx in confirmingTxs)
                         {
                             if (string.IsNullOrEmpty(tx.EncryptedTransactionHash))
                                 continue;
 
-                            var txHash = tx.EncryptedTransactionHash; // No decryption needed
+                            var txHash = encryption.Decrypt(tx.EncryptedTransactionHash);
                             var confirmations = await etherscanService.GetTransactionConfirmationsAsync(txHash);
 
-                            if (confirmations != tx.Confirmations)
-                            {
-                                _logger.LogInformation(
-                                    "Confirmations updated for {CryptoPaymentId}: {Confirmations}",
-                                    tx.CryptoPaymentId,
-                                    confirmations);
+                            _logger.LogInformation(
+                                "Transaction {CryptoPaymentId} has {Confirmations} confirmations",
+                                tx.CryptoPaymentId,
+                                confirmations);
 
-                                await paymentService.CaptureTransactionAsync(tx.CryptoPaymentId);
-                            }
+                            await paymentService.CaptureTransactionAsync(tx.CryptoPaymentId);
                         }
                     }
                 }

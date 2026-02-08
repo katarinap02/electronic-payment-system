@@ -6,20 +6,19 @@ namespace Crypto.API.Models
         public string CryptoPaymentId { get; set; } = string.Empty;
         public string PspTransactionId { get; set; } = string.Empty;
         public string MerchantId { get; set; } = string.Empty;
+        public string? CustomerId { get; set; } // Optional: User/Customer ID from WebShop
 
         public decimal Amount { get; set; }
         public string Currency { get; set; } = "EUR";
 
-        public string WalletAddress { get; set; } = string.Empty;
+        public string EncryptedWalletAddress { get; set; } = string.Empty; // Encrypted merchant wallet address
         public decimal AmountInCrypto { get; set; }
         public string CryptoSymbol { get; set; } = "ETH";
         public decimal ExchangeRate { get; set; }
 
-        public string? EncryptedTransactionHash { get; set; }
-        public int Confirmations { get; set; } = 0;
-
+        public string? EncryptedTransactionHash { get; set; } // Encrypted transaction hash from blockchain
         public CryptoStatus Status { get; set; } = CryptoStatus.PENDING;
-        public DateTime ExpiresAt { get; set; }
+        
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? CompletedAt { get; set; }
 
@@ -31,6 +30,7 @@ namespace Crypto.API.Models
             PENDING,
             CONFIRMING,
             CAPTURED,
+            COMPLETED,
             FAILED,
             EXPIRED,
             CANCELLED

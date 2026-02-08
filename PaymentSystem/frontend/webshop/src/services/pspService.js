@@ -14,6 +14,7 @@ export const pspService = {
       amount: orderData.amount,
       currency: orderData.currency,
       merchantOrderId: orderData.orderId,
+      customerId: orderData.customerId,
       merchantTimestamp: new Date().toISOString()
     })
     return response.data

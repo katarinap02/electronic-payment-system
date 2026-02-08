@@ -9,5 +9,6 @@ public class PaymentInitializationRequest
     public decimal Amount { get; set; }
     public Currency Currency { get; set; }
     public required string MerchantOrderId { get; set; }
+    public string? CustomerId { get; set; }
     public DateTime MerchantTimestamp { get; set; }
 }

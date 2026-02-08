@@ -105,10 +105,10 @@ namespace Crypto.API.Data
                       .IsRequired()
                       .HasMaxLength(200);
 
-                entity.Property(e => e.WalletAddress)
-                    .HasColumnName("walletaddress")
+                entity.Property(e => e.EncryptedWalletAddress)
+                    .HasColumnName("encryptedwalletaddress")
                     .IsRequired()
-                    .HasMaxLength(100);
+                    .HasMaxLength(500);
 
                 entity.Property(e => e.CreatedAt)
                       .HasDefaultValueSql("CURRENT_TIMESTAMP");

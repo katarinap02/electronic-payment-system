@@ -23,7 +23,8 @@ builder.Services.AddScoped<Web3Service>();
 builder.Services.AddScoped<EtherscanService>();
 builder.Services.AddScoped<CryptoPaymentService>();
 
-builder.Services.AddHostedService<BlockchainMonitorService>();
+// Disabled: Using direct MetaMask confirmation instead of blockchain monitoring
+// builder.Services.AddHostedService<BlockchainMonitorService>();
 
 builder.Services.AddHttpClient();
 
@@ -51,6 +52,7 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var dbContext = services.GetRequiredService<CryptoDbContext>();
+        var encryptionService = services.GetRequiredService<EncryptionService>();
         
         logger.LogInformation("Applying Crypto database migrations...");
         dbContext.Database.EnsureCreated();
@@ -58,7 +60,7 @@ using (var scope = app.Services.CreateScope())
 
         // Seed merchant wallets
         logger.LogInformation("Seeding merchant wallets...");
-        Crypto.API.Data.MerchantWalletSeedData.SeedMerchantWallets(dbContext);
+        Crypto.API.Data.MerchantWalletSeedData.SeedMerchantWallets(dbContext, encryptionService);
         logger.LogInformation("Merchant wallets seeding completed!");
     }
     catch (Exception ex)

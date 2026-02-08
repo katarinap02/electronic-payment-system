@@ -20,6 +20,13 @@ public class PaymentsController : ControllerBase
     {
         try
         {
+            // Log incoming request
+            Console.WriteLine($"[PaymentsController] Received InitializePayment request:");
+            Console.WriteLine($"  - MerchantId: {request.MerchantId}");
+            Console.WriteLine($"  - MerchantOrderId: {request.MerchantOrderId}");
+            Console.WriteLine($"  - CustomerId: '{request.CustomerId}'");
+            Console.WriteLine($"  - Amount: {request.Amount}");
+            
             var response = await _paymentService.InitializePaymentAsync(request);
             return Ok(response);
         }

@@ -42,13 +42,16 @@ namespace Crypto.API.Services
         {
             try
             {
+                // Debug: Log incoming CustomerId
+                _logger.LogInformation("CreatePaymentAsync - Received CustomerId: '{CustomerId}'", request.CustomerId ?? "(null)");
+                
                 // 1. Provera duplikata (idempotency)
                 var existingTx = await _transactionRepo.GetByPspTransactionIdAsync(request.PspTransactionId);
                 if (existingTx != null && existingTx.Status != CryptoTransaction.CryptoStatus.FAILED)
                 {
                     _logger.LogWarning("Duplicate transaction detected: {PspId}", request.PspTransactionId);
 
-                    var existingWalletAddress = existingTx.WalletAddress;
+                    var existingWalletAddress = _encryption.Decrypt(existingTx.EncryptedWalletAddress);
                     var existingPaymentUrl = GeneratePaymentUrl(existingTx.CryptoPaymentId);
 
                     return new CreatePaymentResponse(
@@ -57,12 +60,11 @@ namespace Crypto.API.Services
                         existingWalletAddress,
                         existingTx.AmountInCrypto,
                         existingTx.ExchangeRate,
-                        existingTx.ExpiresAt,
                         existingTx.Status.ToString()
                     );
                 }
 
-                // 2. Dohvati exchange rate (EUR ? ETH)
+                // 2. Dohvati exchange rate (EUR → ETH)
                 var exchangeRate = await _web3Service.GetEthToEurExchangeRateAsync();
                 var amountInEth = request.Amount / exchangeRate;
 
@@ -79,26 +81,23 @@ namespace Crypto.API.Services
                     throw new Exception($"Merchant {request.MerchantId} not found");
                 }
                 
-                var merchantWallet = merchant.WalletAddress;
+                // Dekriptuj merchant wallet za vraćanje u response-u
+                var merchantWallet = _encryption.Decrypt(merchant.EncryptedWalletAddress);
 
-                // 5. Expiry time (15 minuta)
-                var expiryMinutes = int.Parse(_configuration["CryptoSettings:PaymentExpiryMinutes"] ?? "15");
-                var expiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes);
-
-                // 6. Kreiraj transakciju
+                // 5. Kreiraj transakciju
                 var transaction = new CryptoTransaction
                 {
                     CryptoPaymentId = cryptoPaymentId,
                     PspTransactionId = request.PspTransactionId,
                     MerchantId = request.MerchantId,
+                    CustomerId = request.CustomerId ?? string.Empty, // Default to empty if not provided
                     Amount = request.Amount,
                     Currency = request.Currency,
-                    WalletAddress = merchantWallet,
+                    EncryptedWalletAddress = merchant.EncryptedWalletAddress, // Vec enkriptovana
                     AmountInCrypto = amountInEth,
                     CryptoSymbol = "ETH",
                     ExchangeRate = exchangeRate,
                     Status = CryptoTransaction.CryptoStatus.PENDING,
-                    ExpiresAt = expiresAt,
                     CreatedByIp = ipAddress,
                     UserAgent = userAgent,
                     CreatedAt = DateTime.UtcNow
@@ -106,29 +105,28 @@ namespace Crypto.API.Services
 
                 await _transactionRepo.CreateAsync(transaction);
 
-                // 7. Audit log (PCI DSS 5.1)
+                // 6. Audit log (PCI DSS 5.1)
                 await _auditRepo.LogAsync(
                     action: "CREATE_PAYMENT",
                     transactionId: cryptoPaymentId,
                     ipAddress: ipAddress,
                     result: "SUCCESS",
-                    details: $"Amount: {request.Amount} {request.Currency} ? {amountInEth:F8} ETH, Rate: {exchangeRate}"
+                    details: $"Amount: {request.Amount} {request.Currency} → {amountInEth:F8} ETH, Rate: {exchangeRate}"
                 );
 
                 _logger.LogInformation(
                     "Crypto payment created: {CryptoPaymentId}, PSP: {PspId}, Amount: {Amount} ETH",
                     cryptoPaymentId, request.PspTransactionId, amountInEth);
 
-                // 8. Genersii payment URL
+                // 7. Generiši payment URL
                 var paymentUrl = GeneratePaymentUrl(cryptoPaymentId);
 
                 return new CreatePaymentResponse(
                     cryptoPaymentId,
                     paymentUrl,
-                    merchantWallet,
+                    merchantWallet, // Dekriptovana adresa
                     amountInEth,
                     exchangeRate,
-                    expiresAt,
                     "PENDING"
                 );
             }
@@ -158,10 +156,10 @@ namespace Crypto.API.Services
             string? txHash = null;
             if (!string.IsNullOrEmpty(transaction.EncryptedTransactionHash))
             {
-                txHash = transaction.EncryptedTransactionHash; // No decryption needed
+                txHash = _encryption.Decrypt(transaction.EncryptedTransactionHash);
             }
 
-            string walletAddress = transaction.WalletAddress;
+            string walletAddress = _encryption.Decrypt(transaction.EncryptedWalletAddress);
             
             // Get merchant name from merchant_wallets table
             var merchant = await _context.MerchantWallets
@@ -176,9 +174,7 @@ namespace Crypto.API.Services
                 transaction.Currency,
                 transaction.AmountInCrypto,
                 txHash,
-                transaction.Confirmations,
                 transaction.CompletedAt,
-                transaction.ExpiresAt,
                 walletAddress,
                 merchantName
             );
@@ -203,8 +199,10 @@ namespace Crypto.API.Services
                 return;
             }
 
+            // Dekriptuj wallet adresu za validaciju
+            var walletAddress = _encryption.Decrypt(transaction.EncryptedWalletAddress);
+            
             // Validacija transakcije na blockchain-u
-            var walletAddress = transaction.WalletAddress;
             var validation = await _web3Service.ValidateTransactionAsync(
                 txHash,
                 walletAddress,
@@ -226,35 +224,34 @@ namespace Crypto.API.Services
                 return;
             }
 
-
-            // Azuriraj status na CONFIRMING
-            transaction.EncryptedTransactionHash = txHash; // Plain text, not encrypted
-            transaction.Status = CryptoTransaction.CryptoStatus.CONFIRMING;
-            transaction.Confirmations = 0;
+            // Enkriptuj txHash i postavi status na COMPLETED
+            transaction.EncryptedTransactionHash = _encryption.Encrypt(txHash);
+            transaction.Status = CryptoTransaction.CryptoStatus.COMPLETED;
+            transaction.CompletedAt = DateTime.UtcNow;
             await _transactionRepo.UpdateAsync(transaction);
 
             await _auditRepo.LogAsync(
-                action: "TX_FOUND",
+                action: "CONFIRM_PAYMENT",
                 transactionId: cryptoPaymentId,
                 ipAddress: "SYSTEM",
                 result: "SUCCESS",
-                details: $"TxHash: {txHash}, Confirmations: 0"
+                details: $"TxHash: {txHash}, Status: COMPLETED"
             );
 
-            _logger.LogInformation("Transaction found on blockchain: {CryptoPaymentId}, TxHash: {TxHash}",
+            _logger.LogInformation("Transaction confirmed and completed: {CryptoPaymentId}, TxHash: {TxHash}",
                 cryptoPaymentId, txHash);
         }
 
         public async Task CaptureTransactionAsync(string cryptoPaymentId)
         {
             var transaction = await _transactionRepo.GetByCryptoPaymentIdAsync(cryptoPaymentId);
-            if (transaction.Status != CryptoTransaction.CryptoStatus.CONFIRMING)
+            if (transaction == null || transaction.Status != CryptoTransaction.CryptoStatus.CONFIRMING)
             {
-                _logger.LogWarning("Cannot capture transaction in status: {Status}", transaction.Status);
+                _logger.LogWarning("Cannot capture transaction in status: {Status}", transaction?.Status);
                 return;
             }
 
-            var txHash = transaction.EncryptedTransactionHash!; // No decryption needed
+            var txHash = _encryption.Decrypt(transaction.EncryptedTransactionHash!);
             var confirmations = await _web3Service.GetTransactionConfirmationsAsync(txHash);
 
             var requiredConfirmations = int.Parse(_configuration["CryptoSettings:ConfirmationsRequired"] ?? "1");
@@ -262,7 +259,6 @@ namespace Crypto.API.Services
             if (confirmations >= requiredConfirmations)
             {
                 transaction.Status = CryptoTransaction.CryptoStatus.CAPTURED;
-                transaction.Confirmations = confirmations;
                 transaction.CompletedAt = DateTime.UtcNow;
                 await _transactionRepo.UpdateAsync(transaction);
 
@@ -279,9 +275,6 @@ namespace Crypto.API.Services
             }
             else
             {
-                transaction.Confirmations = confirmations;
-                await _transactionRepo.UpdateAsync(transaction);
-
                 _logger.LogInformation("Waiting for more confirmations: {CryptoPaymentId}, Current: {Current}, Required: {Required}",
                     cryptoPaymentId, confirmations, requiredConfirmations);
             }

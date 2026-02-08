@@ -35,6 +35,9 @@ public class PaymentService
 
     public async Task<PaymentInitializationResponse> InitializePaymentAsync(PaymentInitializationRequest request)
     {
+        // Debug: Log incoming CustomerId
+        _logger.LogInformation("InitializePaymentAsync - Received CustomerId: '{CustomerId}'", request.CustomerId ?? "(null)");
+        
         // Validate merchant credentials
         var webShop = await _webShopRepository.GetByMerchantIdAsync(request.MerchantId);
         if (webShop == null)
@@ -66,6 +69,7 @@ public class PaymentService
             WebShopId = webShop.Id,
             PaymentMethodId = null,
             MerchantOrderId = request.MerchantOrderId,
+            CustomerId = request.CustomerId,
             Amount = request.Amount,
             Currency = request.Currency,
             MerchantTimestamp = request.MerchantTimestamp,
@@ -177,12 +181,16 @@ public class PaymentService
         {
             try
             {
+                // Debug: Log CustomerId being sent to Crypto API
+                _logger.LogInformation("SelectPaymentMethodAsync - Sending CustomerId to Crypto API: '{CustomerId}'", payment.CustomerId ?? "(null)");
+                
                 var cryptoRequest = new
                 {
                     PspTransactionId = payment.Id.ToString(),
                     Amount = payment.Amount,
                     Currency = payment.Currency.ToString(),
                     MerchantId = webShop.MerchantId,
+                    CustomerId = payment.CustomerId,
                     ReturnUrl = $"{pspFrontendUrl}/payment/{payment.Id}",
                     CancelUrl = $"{pspFrontendUrl}/payment/{payment.Id}?status=cancelled"
                 };
