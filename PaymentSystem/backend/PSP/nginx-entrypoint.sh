@@ -22,16 +22,28 @@ if [ ! -f "$CRT_FILE" ] || [ ! -f "$KEY_FILE" ]; then
     echo "Converting PFX to PEM format..."
     
     # Extract certificate
-    openssl pkcs12 -in "$PFX_FILE" -clcerts -nokeys -out "$CRT_FILE" \
-        -passin pass:$PASSWORD -passout pass: 2>/dev/null
+    echo "Extracting certificate..."
+    if ! openssl pkcs12 -in "$PFX_FILE" -clcerts -nokeys -out "$CRT_FILE" \
+        -passin pass:$PASSWORD -passout pass: 2>&1; then
+        echo "ERROR: Failed to extract certificate"
+        exit 1
+    fi
     
     # Extract private key (with password)
-    openssl pkcs12 -in "$PFX_FILE" -nocerts -out "${CERT_DIR}/psp-api-nginx-temp.key" \
-        -passin pass:$PASSWORD -passout pass:$PASSWORD 2>/dev/null
+    echo "Extracting private key..."
+    if ! openssl pkcs12 -in "$PFX_FILE" -nocerts -out "${CERT_DIR}/psp-api-nginx-temp.key" \
+        -passin pass:$PASSWORD -passout pass:$PASSWORD 2>&1; then
+        echo "ERROR: Failed to extract private key"
+        exit 1
+    fi
     
     # Remove password from private key
-    openssl rsa -in "${CERT_DIR}/psp-api-nginx-temp.key" -out "$KEY_FILE" \
-        -passin pass:$PASSWORD 2>/dev/null
+    echo "Removing password from private key..."
+    if ! openssl rsa -in "${CERT_DIR}/psp-api-nginx-temp.key" -out "$KEY_FILE" \
+        -passin pass:$PASSWORD 2>&1; then
+        echo "ERROR: Failed to remove password from private key"
+        exit 1
+    fi
     
     # Cleanup
     rm -f "${CERT_DIR}/psp-api-nginx-temp.key"

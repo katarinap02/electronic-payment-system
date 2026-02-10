@@ -27,9 +27,10 @@ generate_cert() {
         -out "${DNS_NAME}.crt" -days ${DAYS} \
         -extfile <(printf "subjectAltName=DNS:${DNS_NAME},DNS:localhost,IP:127.0.0.1\nkeyUsage=digitalSignature,keyEncipherment,dataEncipherment\nextendedKeyUsage=serverAuth") 2>/dev/null
     
-    # Generiši PFX fajl
+    # Generiši PFX fajl sa modernim algoritmima (AES-256 umesto RC2)
     openssl pkcs12 -export -out "${DNS_NAME}.pfx" \
         -inkey "${DNS_NAME}.key" -in "${DNS_NAME}.crt" \
+        -keypbe AES-256-CBC -certpbe AES-256-CBC -macalg SHA256 \
         -password "pass:${PASSWORD}" 2>/dev/null
     
     # Cleanup privremenih fajlova
