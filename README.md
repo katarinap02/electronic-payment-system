@@ -1,4 +1,4 @@
-# electronic-payment-system
+# Electronic Payment System
 Master project - Vehicle rental agency payment system
 
 A secure, distributed, and highly available full-stack system designed to facilitate vehicle rentals integrated with a robust, microservice-inspired Payment Service Provider (PSP). The architecture is built with a **C# (.NET)** backend and a **Vue.js** frontend, prioritizing loose coupling, security compliance, and high availability.
